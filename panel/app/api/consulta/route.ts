@@ -4,7 +4,7 @@ import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import { construirContextoSistema } from "@/lib/context";
 import { validarSql } from "@/lib/sql-guard";
-import { ejecutarSelect } from "@/lib/db";
+import { ejecutarSelect, registrarConsulta } from "@/lib/db";
 
 // Modelo detrás de una variable de entorno (4.2 del proyecto): cambiar de
 // proveedor o de versión de Gemini no debería tocar código.
@@ -80,6 +80,11 @@ export async function POST(req: NextRequest) {
     });
     decision = resultado.object;
   } catch (error) {
+    await registrarConsulta({
+      pregunta,
+      resultado: "error_generacion",
+      error: String(error),
+    });
     if (esErrorDeCuota(error)) {
       const segundos = segundosParaReintentar(error);
       return NextResponse.json(
@@ -103,6 +108,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (decision.tipo === "fuera_de_alcance") {
+    await registrarConsulta({ pregunta, resultado: "fuera_de_alcance" });
     return NextResponse.json({
       respuesta:
         decision.mensaje ??
@@ -113,6 +119,11 @@ export async function POST(req: NextRequest) {
   }
 
   if (!decision.sql) {
+    await registrarConsulta({
+      pregunta,
+      resultado: "error_generacion",
+      error: "El modelo no devolvió tipo 'fuera_de_alcance' ni SQL.",
+    });
     return NextResponse.json(
       { error: "No pudimos procesar tu consulta. Intentá nuevamente." },
       { status: 502 }
@@ -122,6 +133,12 @@ export async function POST(req: NextRequest) {
   // --- Paso 5: validar el SQL antes de tocar la base ----------------------
   const validacion = validarSql(decision.sql);
   if (!validacion.valido || !validacion.sql) {
+    await registrarConsulta({
+      pregunta,
+      sqlGenerado: decision.sql,
+      resultado: "error_validacion",
+      error: validacion.motivo,
+    });
     return NextResponse.json(
       {
         error: "No pudimos procesar esta consulta. Intentá formularla de otra manera.",
@@ -138,6 +155,12 @@ export async function POST(req: NextRequest) {
     const resultado = await ejecutarSelect(validacion.sql);
     filas = resultado.filas;
   } catch (error) {
+    await registrarConsulta({
+      pregunta,
+      sqlGenerado: validacion.sql,
+      resultado: "error_ejecucion",
+      error: String(error),
+    });
     return NextResponse.json(
       {
         error: "No pudimos obtener la información en este momento. Intentá nuevamente.",
@@ -150,6 +173,7 @@ export async function POST(req: NextRequest) {
 
   // --- Paso 7: redactar la respuesta a partir de las filas ----------------
   let respuesta: string;
+  let redaccionFallo = false;
   try {
     const { text } = await generateText({
       model: google(MODELO),
@@ -182,10 +206,18 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     // Si falla la redacción, igual devolvemos el SQL y las filas: son el
     // dato auditable (4.1 principio rector). La prosa es accesorio.
+    redaccionFallo = true;
     respuesta = esErrorDeCuota(error)
       ? "Llegamos al límite de consultas a la IA por el momento, pero podés ver la información que buscabas a continuación."
       : "Podés ver la información que buscabas a continuación.";
   }
+
+  await registrarConsulta({
+    pregunta,
+    sqlGenerado: validacion.sql,
+    resultado: redaccionFallo ? "error_redaccion" : "ok",
+    filasDevueltas: filas.length,
+  });
 
   return NextResponse.json({
     respuesta,

@@ -161,7 +161,7 @@ export default function Home() {
           value={pregunta}
           onChange={(e) => setPregunta(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && consultar()}
-          placeholder="¿Cuántas mujeres encabezaron listas de diputados en Córdoba en 2025?"
+          placeholder="¿Cuántas mujeres encabezaron listas en 2025?"
         />
         <button onClick={consultar} disabled={cargando}>
           {cargando ? (
@@ -375,6 +375,9 @@ export default function Home() {
         @media (max-width: 480px) {
           .search-card {
             flex-direction: column;
+          }
+          .search-card input {
+            font-size: 14px;
           }
           .search-card button {
             justify-content: center;

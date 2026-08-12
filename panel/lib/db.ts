@@ -47,3 +47,40 @@ export async function ejecutarSelect(sql: string): Promise<ResultadoConsulta> {
     cliente.release();
   }
 }
+
+export type ResultadoLog =
+  | "ok"
+  | "fuera_de_alcance"
+  | "error_generacion"
+  | "error_validacion"
+  | "error_ejecucion"
+  | "error_redaccion";
+
+export interface RegistroConsulta {
+  pregunta: string;
+  sqlGenerado?: string | null;
+  resultado: ResultadoLog;
+  filasDevueltas?: number | null;
+  error?: string | null;
+}
+
+// Fire-and-forget pensado: si falla el registro (por ejemplo la tabla no
+// existe todavía en algún ambiente), no tiene que tirar abajo la respuesta
+// al usuario. Se loguea a consola y se sigue.
+export async function registrarConsulta(registro: RegistroConsulta): Promise<void> {
+  try {
+    await obtenerPool().query(
+      `INSERT INTO consultas_log (pregunta, sql_generado, resultado, filas_devueltas, error)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [
+        registro.pregunta,
+        registro.sqlGenerado ?? null,
+        registro.resultado,
+        registro.filasDevueltas ?? null,
+        registro.error ?? null,
+      ]
+    );
+  } catch (error) {
+    console.error("No se pudo registrar la consulta en consultas_log:", error);
+  }
+}
