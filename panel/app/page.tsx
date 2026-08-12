@@ -372,6 +372,15 @@ export default function Home() {
           opacity: 0.7;
           cursor: default;
         }
+        @media (max-width: 480px) {
+          .search-card {
+            flex-direction: column;
+          }
+          .search-card button {
+            justify-content: center;
+            padding: 12px 20px;
+          }
+        }
         .search-card button svg {
           width: 15px;
           height: 15px;
