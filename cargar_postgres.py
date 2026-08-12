@@ -142,14 +142,9 @@ def main():
                 log("creando vista")
                 cur.execute(SQL_VISTA.read_text(encoding="utf-8"))
 
-            cur.execute("""
-                SELECT count(*) AS filas,
-                       count(*) FILTER (WHERE cardinality(anomalias) = 0) AS limpias
-                FROM v_candidaturas
-            """)
-            filas, limpias = cur.fetchone()
-            log(f"  v_candidaturas: {filas:,} filas, {limpias:,} sin anomalias "
-                f"({limpias / filas * 100:.1f}%)")
+            cur.execute("SELECT count(*) FROM v_candidaturas")
+            filas = cur.fetchone()[0]
+            log(f"  v_candidaturas: {filas:,} filas")
         con.commit()
 
     log("listo")
