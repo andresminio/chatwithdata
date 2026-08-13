@@ -47,6 +47,20 @@ const esquemaRespuestaModelo = z.object({
     .string()
     .optional()
     .describe("Sentencia SELECT si tipo = 'sql'. Omitir si es fuera_de_alcance."),
+  explicacion: z
+    .string()
+    .optional()
+    .describe(
+      "Obligatorio si tipo = 'sql'. Explicación en español neutro, para una persona sin " +
+        "conocimientos de SQL, de qué hace la consulta como una secuencia de acciones " +
+        "lógicas — no traduzcas la sintaxis, describí el razonamiento. Una sola oración, " +
+        "en presente, encadenando los pasos con comas. Ejemplo: 'La consulta agrupa por " +
+        "candidato, cuenta en cuántas elecciones participó cada uno, ordena de mayor a " +
+        "menor y muestra los 10 con más elecciones.' No menciones nombres de columnas ni " +
+        "de tablas ni palabras reservadas de SQL (SELECT, GROUP BY, etc.): describí la " +
+        "acción en lenguaje natural (ej. 'agrupa por candidato' en vez de 'agrupa por " +
+        "id_candidato', 'filtra por año 2025' en vez de 'WHERE anio = 2025')."
+    ),
   mensaje: z
     .string()
     .optional()
@@ -273,6 +287,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     respuesta,
     sql: validacion.sql,
+    explicacionSql: decision.explicacion ?? null,
     filas,
     logId,
     total,

@@ -5,6 +5,7 @@ import { Fragment, useState } from "react";
 interface RespuestaConsulta {
   respuesta: string;
   sql: string | null;
+  explicacionSql?: string | null;
   filas: Record<string, unknown>[];
   error?: string;
   detalle?: string;
@@ -286,6 +287,9 @@ export default function Home() {
               <span className="title">Consulta realizada por la IA</span>
             </span>
           </summary>
+          {resultado.explicacionSql && (
+            <p className="sql-explicacion">{resultado.explicacionSql}</p>
+          )}
           <pre className="sql-body">{resultado.sql}</pre>
         </details>
       )}
@@ -682,6 +686,15 @@ export default function Home() {
           font-size: 14px;
           font-weight: 600;
           color: var(--ink);
+        }
+        .sql-explicacion {
+          border-top: 1px solid var(--border);
+          padding: 14px 18px;
+          margin: 0;
+          font-size: 13px;
+          line-height: 1.55;
+          color: var(--ink-soft);
+          background: #fafaff;
         }
         .sql-body {
           border-top: 1px solid var(--border);
