@@ -129,8 +129,8 @@ ETAPA — alias → valor exacto en 'etapa':
   balotaje / segunda vuelta / ballotage → Segunda vuelta
 
 GÉNERO — alias → valor exacto en 'genero':
-  mujeres / candidatas → F
-  varones / hombres → M
+  mujeres / candidatas / femenino → F
+  varones / hombres / masculino → M
 
 PARTIDOS Y SIGLAS — usar ILIKE, nunca igualdad exacta (821 agrupaciones distintas, con variantes por distrito/año que son entidades legales distintas):
   LLA / La Libertad Avanza → agrupacion ILIKE '%LIBERTAD AVANZA%'

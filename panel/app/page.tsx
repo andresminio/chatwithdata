@@ -102,11 +102,46 @@ const SUBFILTROS: Record<string, { label: string; instruccion: string }[]> = {
 const ANIOS = ["2011", "2013", "2015", "2017", "2019", "2021", "2023", "2025"];
 const ANIOS_SIN_PASO = new Set(["2025"]);
 
+// Valores exactos de la columna distrito (ver diccionario_terminos.md,
+// sección 1): 24 provincias + DISTRITO ÚNICO. Se deja afuera DISTRITO
+// ÚNICO acá porque no es una provincia elegible por el usuario, es la
+// categoría de Presidente y Vice / Parlasur.
+const DISTRITOS = [
+  "BUENOS AIRES",
+  "CAPITAL FEDERAL",
+  "CATAMARCA",
+  "CHACO",
+  "CHUBUT",
+  "CÓRDOBA",
+  "CORRIENTES",
+  "ENTRE RÍOS",
+  "FORMOSA",
+  "JUJUY",
+  "LA PAMPA",
+  "LA RIOJA",
+  "MENDOZA",
+  "MISIONES",
+  "NEUQUÉN",
+  "RÍO NEGRO",
+  "SALTA",
+  "SAN JUAN",
+  "SAN LUIS",
+  "SANTA CRUZ",
+  "SANTA FE",
+  "S DEL ESTERO",
+  "T DEL FUEGO",
+  "TUCUMÁN",
+];
+
+const GENEROS = ["Femenino", "Masculino"];
+
 export default function Home() {
   const [pregunta, setPregunta] = useState("");
   const [nivel1Activo, setNivel1Activo] = useState<string | null>(null);
   const [subfiltrosActivos, setSubfiltrosActivos] = useState<string[]>([]);
   const [anioActivo, setAnioActivo] = useState<string | null>(null);
+  const [distritoActivo, setDistritoActivo] = useState<string | null>(null);
+  const [generoActivo, setGeneroActivo] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const [resultado, setResultado] = useState<RespuestaConsulta | null>(null);
   const [reportado, setReportado] = useState(false);
@@ -145,6 +180,8 @@ export default function Home() {
     setNivel1Activo((actual) => (actual === label ? null : label));
     setSubfiltrosActivos([]); // las opciones de nivel 2 cambian según el nivel 1
     setAnioActivo(null);
+    setDistritoActivo(null);
+    setGeneroActivo(null);
   }
 
   function toggleSubfiltro(label: string) {
@@ -152,8 +189,11 @@ export default function Home() {
     setSubfiltrosActivos((actuales) =>
       seEstaDesactivando ? actuales.filter((l) => l !== label) : [...actuales, label]
     );
-    if (label === ELEGIR_ANIO && seEstaDesactivando) {
-      setAnioActivo(null); // se ocultó la fila de años: no dejar uno elegido "fantasma"
+    if (seEstaDesactivando) {
+      // se ocultó la fila de opciones: no dejar una elección "fantasma"
+      if (label === ELEGIR_ANIO) setAnioActivo(null);
+      if (label === "Por distrito") setDistritoActivo(null);
+      if (label === "Por género") setGeneroActivo(null);
     }
   }
 
@@ -161,17 +201,37 @@ export default function Home() {
     setAnioActivo((actual) => (actual === anio ? null : anio));
   }
 
+  function elegirDistrito(distrito: string) {
+    setDistritoActivo((actual) => (actual === distrito ? null : distrito));
+  }
+
+  function elegirGenero(genero: string) {
+    setGeneroActivo((actual) => (actual === genero ? null : genero));
+  }
+
   async function consultar() {
     const base = pregunta.trim();
     if (!base) return;
     const filtro1 = NIVEL1.find((f) => f.label === nivel1Activo);
     const opciones = nivel1Activo ? SUBFILTROS[nivel1Activo] : [];
+    // "Por distrito" y "Por género" son segmentación (desglose) si no se
+    // elige un valor puntual, y pasan a ser filtro si se elige uno — por
+    // eso quedan afuera del mapeo genérico y se arman a mano más abajo.
+    const ETIQUETAS_CON_VALOR_ELEGIBLE = [ELEGIR_ANIO, "Por distrito", "Por género"];
     const instrucciones = [
       ...(filtro1 ? [filtro1.instruccion] : []),
       ...opciones
-        .filter((f) => f.label !== ELEGIR_ANIO && subfiltrosActivos.includes(f.label))
+        .filter(
+          (f) => !ETIQUETAS_CON_VALOR_ELEGIBLE.includes(f.label) && subfiltrosActivos.includes(f.label)
+        )
         .map((f) => f.instruccion),
       ...(anioActivo ? [`Limitalo al año electoral ${anioActivo}.`] : []),
+      ...(subfiltrosActivos.includes("Por distrito")
+        ? [distritoActivo ? `Limitalo al distrito ${distritoActivo}.` : "Desglosalo por distrito."]
+        : []),
+      ...(subfiltrosActivos.includes("Por género")
+        ? [generoActivo ? `Limitalo al género ${generoActivo}.` : "Desglosalo por género."]
+        : []),
     ];
     const texto = instrucciones.length ? `${base} (${instrucciones.join(" ")})` : base;
     setCargando(true);
@@ -273,7 +333,7 @@ export default function Home() {
       </div>
 
       {nivel1Activo && subfiltrosActivos.includes(ELEGIR_ANIO) && (
-        <div className="chips chips-anios">
+        <div className="chips chips-sub">
           {ANIOS
             // Si PASO está activo solo (sin Generales), no ofrecer años en
             // los que no hubo PASO. Si Generales también está activo, la
@@ -296,6 +356,36 @@ export default function Home() {
                 {anio}
               </button>
             ))}
+        </div>
+      )}
+
+      {nivel1Activo && subfiltrosActivos.includes("Por distrito") && (
+        <div className="chips chips-sub">
+          {DISTRITOS.map((distrito) => (
+            <button
+              key={distrito}
+              className={`chip${distritoActivo === distrito ? " chip-activo" : ""}`}
+              onClick={() => elegirDistrito(distrito)}
+              disabled={cargando}
+            >
+              {distrito}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {nivel1Activo && subfiltrosActivos.includes("Por género") && (
+        <div className="chips chips-sub">
+          {GENEROS.map((genero) => (
+            <button
+              key={genero}
+              className={`chip${generoActivo === genero ? " chip-activo" : ""}`}
+              onClick={() => elegirGenero(genero)}
+              disabled={cargando}
+            >
+              {genero}
+            </button>
+          ))}
         </div>
       )}
 
@@ -554,10 +644,10 @@ export default function Home() {
           flex-wrap: wrap;
           margin-bottom: 32px;
         }
-        .chips-anios {
+        .chips-sub {
           margin-top: -20px;
         }
-        .chips-anios .chip {
+        .chips-sub .chip {
           font-size: 11px;
           padding: 5px 11px;
         }
