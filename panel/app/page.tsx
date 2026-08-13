@@ -400,92 +400,107 @@ export default function Home() {
       </div>
 
       {nivel1Activo && subfiltrosActivos.includes(ELEGIR_ANIO) && (
-        <div className="chips chips-sub">
-          {ANIOS
-            // Si PASO está activo solo (sin Generales), no ofrecer años en
-            // los que no hubo PASO. Si Generales también está activo, la
-            // etapa ya cubre ambos casos y el año vuelve a tener sentido.
-            // (En Totales, PASO/Generales viven bajo "Por etapa" — ver
-            // etapaEstaActiva.)
-            .filter(
-              (anio) =>
-                !(etapaEstaActiva("PASO") && !etapaEstaActiva("Generales") && ANIOS_SIN_PASO.has(anio))
-            )
-            .map((anio) => (
-              <button
-                key={anio}
-                className={`chip${anioActivo === anio ? " chip-activo" : ""}`}
-                onClick={() => elegirAnio(anio)}
-                disabled={cargando}
-              >
-                {anio}
-              </button>
-            ))}
+        <div className="chips-sub-wrap">
+          <span className="chips-sub-label">Elegí un año</span>
+          <div className="chips chips-sub">
+            {ANIOS
+              // Si PASO está activo solo (sin Generales), no ofrecer años en
+              // los que no hubo PASO. Si Generales también está activo, la
+              // etapa ya cubre ambos casos y el año vuelve a tener sentido.
+              // (En Totales, PASO/Generales viven bajo "Por etapa" — ver
+              // etapaEstaActiva.)
+              .filter(
+                (anio) =>
+                  !(etapaEstaActiva("PASO") && !etapaEstaActiva("Generales") && ANIOS_SIN_PASO.has(anio))
+              )
+              .map((anio) => (
+                <button
+                  key={anio}
+                  className={`chip${anioActivo === anio ? " chip-activo" : ""}`}
+                  onClick={() => elegirAnio(anio)}
+                  disabled={cargando}
+                >
+                  {anio}
+                </button>
+              ))}
+          </div>
         </div>
       )}
 
       {nivel1Activo &&
         (subfiltrosActivos.includes("Por distrito") || subfiltrosActivos.includes(ELEGIR_DISTRITO)) && (
-        <div className="chips chips-sub">
-          {DISTRITOS.map((distrito) => (
-            <button
-              key={distrito.valor}
-              className={`chip${distritoActivo === distrito.valor ? " chip-activo" : ""}`}
-              onClick={() => elegirDistrito(distrito.valor)}
-              disabled={cargando}
-            >
-              {distrito.etiqueta}
-            </button>
-          ))}
+        <div className="chips-sub-wrap">
+          <span className="chips-sub-label">Elegí un distrito</span>
+          <div className="chips chips-sub">
+            {DISTRITOS.map((distrito) => (
+              <button
+                key={distrito.valor}
+                className={`chip${distritoActivo === distrito.valor ? " chip-activo" : ""}`}
+                onClick={() => elegirDistrito(distrito.valor)}
+                disabled={cargando}
+              >
+                {distrito.etiqueta}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       {nivel1Activo && subfiltrosActivos.includes("Por género") && (
-        <div className="chips chips-sub">
-          {GENEROS.map((genero) => (
-            <button
-              key={genero}
-              className={`chip${generoActivo === genero ? " chip-activo" : ""}`}
-              onClick={() => elegirGenero(genero)}
-              disabled={cargando}
-            >
-              {genero}
-            </button>
-          ))}
+        <div className="chips-sub-wrap">
+          <span className="chips-sub-label">Elegí un género</span>
+          <div className="chips chips-sub">
+            {GENEROS.map((genero) => (
+              <button
+                key={genero}
+                className={`chip${generoActivo === genero ? " chip-activo" : ""}`}
+                onClick={() => elegirGenero(genero)}
+                disabled={cargando}
+              >
+                {genero}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       {nivel1Activo && subfiltrosActivos.includes("Por cargo") && (
-        <div className="chips chips-sub">
-          {CARGOS.map((cargo) => (
-            <button
-              key={cargo.valor}
-              className={`chip${cargoActivo === cargo.valor ? " chip-activo" : ""}`}
-              onClick={() => elegirCargo(cargo.valor)}
-              disabled={cargando}
-            >
-              {cargo.etiqueta}
-            </button>
-          ))}
+        <div className="chips-sub-wrap">
+          <span className="chips-sub-label">Elegí un cargo</span>
+          <div className="chips chips-sub">
+            {CARGOS.map((cargo) => (
+              <button
+                key={cargo.valor}
+                className={`chip${cargoActivo === cargo.valor ? " chip-activo" : ""}`}
+                onClick={() => elegirCargo(cargo.valor)}
+                disabled={cargando}
+              >
+                {cargo.etiqueta}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
       {nivel1Activo && subfiltrosActivos.includes("Por etapa") && (
-        <div className="chips chips-sub">
-          {ETAPAS
-            // Si ya se eligió un año sin PASO, no ofrecer PASO acá tampoco
-            // (mismo criterio que en la fila de años).
-            .filter((etapa) => !(etapa === "PASO" && anioActivo && ANIOS_SIN_PASO.has(anioActivo)))
-            .map((etapa) => (
-              <button
-                key={etapa}
-                className={`chip${etapasActivas.includes(etapa) ? " chip-activo" : ""}`}
-                onClick={() => toggleEtapa(etapa)}
-                disabled={cargando}
-              >
-                {etapa}
-              </button>
-            ))}
+        <div className="chips-sub-wrap">
+          <span className="chips-sub-label">Elegí la etapa</span>
+          <div className="chips chips-sub">
+            {ETAPAS
+              // Si ya se eligió un año sin PASO, no ofrecer PASO acá tampoco
+              // (mismo criterio que en la fila de años).
+              .filter((etapa) => !(etapa === "PASO" && anioActivo && ANIOS_SIN_PASO.has(anioActivo)))
+              .map((etapa) => (
+                <button
+                  key={etapa}
+                  className={`chip${etapasActivas.includes(etapa) ? " chip-activo" : ""}`}
+                  onClick={() => toggleEtapa(etapa)}
+                  disabled={cargando}
+                >
+                  {etapa}
+                </button>
+              ))}
+          </div>
         </div>
       )}
 
@@ -744,8 +759,23 @@ export default function Home() {
           flex-wrap: wrap;
           margin-bottom: 32px;
         }
-        .chips-sub {
+        .chips-sub-wrap {
+          border-top: 1px solid var(--border);
           margin-top: -20px;
+          padding-top: 14px;
+          margin-bottom: 28px;
+        }
+        .chips-sub-label {
+          display: block;
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--ink-soft);
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          margin-bottom: 8px;
+        }
+        .chips-sub-wrap .chips-sub {
+          margin-bottom: 0;
         }
         .chips-sub .chip {
           font-size: 11px;
