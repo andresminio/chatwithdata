@@ -220,10 +220,14 @@ export async function POST(req: NextRequest) {
         "con cada ítem en una línea nueva que empiece con '- '; en cada ítem poné en negrita " +
         "el nombre de la categoría, no la cifra, por ejemplo '- **Diputados Nacionales:** 63'. " +
         "Si el desglose tiene más de 5 categorías, NO las listes una por una en la prosa " +
-        "(esas filas ya se muestran completas en la tabla debajo de la respuesta): dá el " +
-        "total general y como máximo destacá las 2 o 3 categorías con mayor valor, y cerrá " +
-        "remitiendo a la tabla para el resto, por ejemplo 'El detalle completo por distrito " +
-        "está en la tabla debajo'. Evitá otros símbolos de markdown (títulos, tablas, " +
+        "(esas filas ya se muestran en la tabla debajo de la respuesta): dá el total " +
+        "general y como máximo destacá las 2 o 3 categorías con mayor valor, y cerrá " +
+        "remitiendo a la tabla para el resto. Si el prompt indica 'Resultados truncados: " +
+        "no', esas filas están completas en la tabla y podés decir por ejemplo 'El detalle " +
+        "completo por distrito está en la tabla debajo'. Si indica 'Resultados truncados: " +
+        "sí', la tabla NO tiene todas las filas (solo una selección parcial): NO uses la " +
+        "palabra 'completo' para describirla, decí en cambio algo como 'El detalle de estas " +
+        "filas está en la tabla debajo'. Evitá otros símbolos de markdown (títulos, tablas, " +
         "comillas de cita). Si el prompt indica 'Resultados truncados: sí' (y SOLO en ese " +
         "caso): te paso 'Cantidad total de filas/categorías que devuelve la consulta " +
         "completa' — es un CONTEO DE FILAS de la consulta sin el límite de la tabla, NO es " +

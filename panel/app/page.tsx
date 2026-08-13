@@ -165,7 +165,7 @@ const CARGOS = [
 // La tabla en pantalla pagina de a esto (el Excel descargable siempre trae
 // todas las filas juntas en una sola hoja — acá es solo para no scrollear
 // una lista larguísima).
-const FILAS_POR_PAGINA = 50;
+const FILAS_POR_PAGINA = 25;
 
 export default function Home() {
   const [pregunta, setPregunta] = useState("");
