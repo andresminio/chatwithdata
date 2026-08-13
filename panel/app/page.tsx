@@ -65,14 +65,14 @@ function formatearRespuesta(texto: string) {
 // Nivel 1: elige el modo de la respuesta. Excluyente entre sí (no tiene
 // sentido pedir "listado" y "total agregado" al mismo tiempo).
 const NIVEL1 = [
-  { label: "Candidaturas", instruccion: "Dame el listado completo con el detalle de cada candidatura, no solo el total." },
   { label: "Totales", instruccion: "Dame el total agregado (la cantidad), no el detalle fila por fila." },
+  { label: "Listado", instruccion: "Dame el listado completo con el detalle de cada candidatura, no solo el total." },
 ];
 
 // Nivel 2: depende de qué se eligió en el nivel 1. Se puede combinar más de
 // uno (por ejemplo Por distrito + Por género + 2025 juntos).
 const SUBFILTROS: Record<string, { label: string; instruccion: string }[]> = {
-  Candidaturas: [
+  Listado: [
     { label: "Presidente y Vice", instruccion: "Limitalo al cargo Presidente y Vice." },
     { label: "Diputados", instruccion: "Limitalo al cargo Diputados Nacionales." },
     { label: "Senadores", instruccion: "Limitalo al cargo Senadores Nacionales." },
