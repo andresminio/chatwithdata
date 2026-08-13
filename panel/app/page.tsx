@@ -315,6 +315,19 @@ export default function Home() {
         </div>
       )}
 
+      <footer className="site-footer">
+        <div className="footer-line">
+          Fuente de datos · Candidaturas y precandidaturas electorales nacionales · 2011–2025 ·
+          Cámara Nacional Electoral
+        </div>
+        <div className="footer-line">
+          ¿Tenés una consulta o sugerencia? · Escribinos a{" "}
+          <a href="mailto:cnelectoral.datosabiertos@pjn.gov.ar">
+            cnelectoral.datosabiertos@pjn.gov.ar
+          </a>
+        </div>
+      </footer>
+
       <style jsx global>{`
         :root {
           --bg: #f6f7fb;
@@ -704,6 +717,27 @@ export default function Home() {
         }
         .table-truncado strong {
           color: var(--ink);
+        }
+
+        .site-footer {
+          margin-top: 56px;
+          padding-top: 24px;
+          border-top: 1px solid var(--border);
+          text-align: center;
+        }
+        .footer-line {
+          color: var(--ink-soft);
+          font-size: 12px;
+          line-height: 1.8;
+        }
+        .site-footer a {
+          color: var(--accent);
+          font-weight: 600;
+          text-decoration: none;
+        }
+        .site-footer a:hover {
+          color: var(--accent-2);
+          text-decoration: underline;
         }
       `}</style>
     </main>
