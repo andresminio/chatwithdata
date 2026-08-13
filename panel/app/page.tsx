@@ -106,34 +106,43 @@ const ANIOS_SIN_PASO = new Set(["2025"]);
 // sección 1): 24 provincias + DISTRITO ÚNICO. Se deja afuera DISTRITO
 // ÚNICO acá porque no es una provincia elegible por el usuario, es la
 // categoría de Presidente y Vice / Parlasur.
+// { valor: exactamente lo que tiene la columna distrito (va en la
+// instrucción a la IA), etiqueta: cómo se muestra en el chip }.
 const DISTRITOS = [
-  "BUENOS AIRES",
-  "CAPITAL FEDERAL",
-  "CATAMARCA",
-  "CHACO",
-  "CHUBUT",
-  "CÓRDOBA",
-  "CORRIENTES",
-  "ENTRE RÍOS",
-  "FORMOSA",
-  "JUJUY",
-  "LA PAMPA",
-  "LA RIOJA",
-  "MENDOZA",
-  "MISIONES",
-  "NEUQUÉN",
-  "RÍO NEGRO",
-  "SALTA",
-  "SAN JUAN",
-  "SAN LUIS",
-  "SANTA CRUZ",
-  "SANTA FE",
-  "S DEL ESTERO",
-  "T DEL FUEGO",
-  "TUCUMÁN",
+  { valor: "BUENOS AIRES", etiqueta: "Buenos Aires" },
+  { valor: "CAPITAL FEDERAL", etiqueta: "CABA" },
+  { valor: "CATAMARCA", etiqueta: "Catamarca" },
+  { valor: "CHACO", etiqueta: "Chaco" },
+  { valor: "CHUBUT", etiqueta: "Chubut" },
+  { valor: "CÓRDOBA", etiqueta: "Córdoba" },
+  { valor: "CORRIENTES", etiqueta: "Corrientes" },
+  { valor: "ENTRE RÍOS", etiqueta: "Entre Ríos" },
+  { valor: "FORMOSA", etiqueta: "Formosa" },
+  { valor: "JUJUY", etiqueta: "Jujuy" },
+  { valor: "LA PAMPA", etiqueta: "La Pampa" },
+  { valor: "LA RIOJA", etiqueta: "La Rioja" },
+  { valor: "MENDOZA", etiqueta: "Mendoza" },
+  { valor: "MISIONES", etiqueta: "Misiones" },
+  { valor: "NEUQUÉN", etiqueta: "Neuquén" },
+  { valor: "RÍO NEGRO", etiqueta: "Río Negro" },
+  { valor: "SALTA", etiqueta: "Salta" },
+  { valor: "SAN JUAN", etiqueta: "San Juan" },
+  { valor: "SAN LUIS", etiqueta: "San Luis" },
+  { valor: "SANTA CRUZ", etiqueta: "Santa Cruz" },
+  { valor: "SANTA FE", etiqueta: "Santa Fe" },
+  { valor: "S DEL ESTERO", etiqueta: "Santiago del Estero" },
+  { valor: "T DEL FUEGO", etiqueta: "Tierra del Fuego" },
+  { valor: "TUCUMÁN", etiqueta: "Tucumán" },
 ];
 
 const GENEROS = ["Femenino", "Masculino"];
+
+const CARGOS = [
+  { valor: "PRESIDENTE Y VICE", etiqueta: "Presidente y Vice" },
+  { valor: "DIPUTADOS NACIONALES", etiqueta: "Diputados Nacionales" },
+  { valor: "SENADORES NACIONALES", etiqueta: "Senadores Nacionales" },
+  { valor: "PARLAMENTARIOS DEL MERCOSUR", etiqueta: "Parlamentarios del Mercosur" },
+];
 
 export default function Home() {
   const [pregunta, setPregunta] = useState("");
@@ -142,6 +151,7 @@ export default function Home() {
   const [anioActivo, setAnioActivo] = useState<string | null>(null);
   const [distritoActivo, setDistritoActivo] = useState<string | null>(null);
   const [generoActivo, setGeneroActivo] = useState<string | null>(null);
+  const [cargoActivo, setCargoActivo] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const [resultado, setResultado] = useState<RespuestaConsulta | null>(null);
   const [reportado, setReportado] = useState(false);
@@ -182,6 +192,7 @@ export default function Home() {
     setAnioActivo(null);
     setDistritoActivo(null);
     setGeneroActivo(null);
+    setCargoActivo(null);
   }
 
   function toggleSubfiltro(label: string) {
@@ -194,6 +205,7 @@ export default function Home() {
       if (label === ELEGIR_ANIO) setAnioActivo(null);
       if (label === "Por distrito") setDistritoActivo(null);
       if (label === "Por género") setGeneroActivo(null);
+      if (label === "Por cargo") setCargoActivo(null);
     }
   }
 
@@ -209,15 +221,20 @@ export default function Home() {
     setGeneroActivo((actual) => (actual === genero ? null : genero));
   }
 
+  function elegirCargo(cargo: string) {
+    setCargoActivo((actual) => (actual === cargo ? null : cargo));
+  }
+
   async function consultar() {
     const base = pregunta.trim();
     if (!base) return;
     const filtro1 = NIVEL1.find((f) => f.label === nivel1Activo);
     const opciones = nivel1Activo ? SUBFILTROS[nivel1Activo] : [];
-    // "Por distrito" y "Por género" son segmentación (desglose) si no se
-    // elige un valor puntual, y pasan a ser filtro si se elige uno — por
-    // eso quedan afuera del mapeo genérico y se arman a mano más abajo.
-    const ETIQUETAS_CON_VALOR_ELEGIBLE = [ELEGIR_ANIO, "Por distrito", "Por género"];
+    // "Por distrito", "Por género" y "Por cargo" son segmentación (desglose)
+    // si no se elige un valor puntual, y pasan a ser filtro si se elige
+    // uno — por eso quedan afuera del mapeo genérico y se arman a mano.
+    const ETIQUETAS_CON_VALOR_ELEGIBLE = [ELEGIR_ANIO, "Por distrito", "Por género", "Por cargo"];
+    const cargoEtiqueta = CARGOS.find((c) => c.valor === cargoActivo)?.etiqueta ?? cargoActivo;
     const instrucciones = [
       ...(filtro1 ? [filtro1.instruccion] : []),
       ...opciones
@@ -231,6 +248,9 @@ export default function Home() {
         : []),
       ...(subfiltrosActivos.includes("Por género")
         ? [generoActivo ? `Limitalo al género ${generoActivo}.` : "Desglosalo por género."]
+        : []),
+      ...(subfiltrosActivos.includes("Por cargo")
+        ? [cargoActivo ? `Limitalo al cargo ${cargoEtiqueta}.` : "Desglosalo por cargo."]
         : []),
     ];
     const texto = instrucciones.length ? `${base} (${instrucciones.join(" ")})` : base;
@@ -363,12 +383,12 @@ export default function Home() {
         <div className="chips chips-sub">
           {DISTRITOS.map((distrito) => (
             <button
-              key={distrito}
-              className={`chip${distritoActivo === distrito ? " chip-activo" : ""}`}
-              onClick={() => elegirDistrito(distrito)}
+              key={distrito.valor}
+              className={`chip${distritoActivo === distrito.valor ? " chip-activo" : ""}`}
+              onClick={() => elegirDistrito(distrito.valor)}
               disabled={cargando}
             >
-              {distrito}
+              {distrito.etiqueta}
             </button>
           ))}
         </div>
@@ -384,6 +404,21 @@ export default function Home() {
               disabled={cargando}
             >
               {genero}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {nivel1Activo && subfiltrosActivos.includes("Por cargo") && (
+        <div className="chips chips-sub">
+          {CARGOS.map((cargo) => (
+            <button
+              key={cargo.valor}
+              className={`chip${cargoActivo === cargo.valor ? " chip-activo" : ""}`}
+              onClick={() => elegirCargo(cargo.valor)}
+              disabled={cargando}
+            >
+              {cargo.etiqueta}
             </button>
           ))}
         </div>
