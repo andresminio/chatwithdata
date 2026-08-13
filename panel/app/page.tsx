@@ -117,31 +117,18 @@ export default function Home() {
     }
   }
 
-  function descargarCSV() {
+  async function descargarExcel() {
     const filas = resultado?.filas;
     if (!filas || filas.length === 0) return;
 
-    const columnas = Object.keys(filas[0]);
-    const escapar = (valor: unknown) => {
-      const texto = String(valor ?? "");
-      // comillas dobles si el valor tiene coma, comillas o salto de línea
-      return /[",\n]/.test(texto) ? `"${texto.replace(/"/g, '""')}"` : texto;
-    };
-    const lineas = [
-      columnas.join(","),
-      ...filas.map((fila) => columnas.map((c) => escapar(fila[c])).join(",")),
-    ];
-    // BOM al inicio para que Excel detecte UTF-8 y no rompa los acentos
-    const csv = "﻿" + lineas.join("\r\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const enlace = document.createElement("a");
+    // Archivo .xlsx real (no CSV): evita que Excel adivine mal la
+    // codificación de texto y rompa tildes/ñ como "NÃ©stor".
+    const XLSX = await import("xlsx");
+    const hoja = XLSX.utils.json_to_sheet(filas);
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hoja, "Resultados");
     const fecha = new Date().toISOString().slice(0, 10);
-    enlace.href = url;
-    enlace.download = `candidaturas-${fecha}.csv`;
-    enlace.click();
-    URL.revokeObjectURL(url);
+    XLSX.writeFile(libro, `candidaturas-${fecha}.xlsx`);
   }
 
   function toggleNivel1(label: string) {
@@ -312,11 +299,11 @@ export default function Home() {
                 ({resultado.filas.length} {resultado.filas.length === 1 ? "fila" : "filas"})
               </span>
             </span>
-            <button type="button" className="download-btn" onClick={descargarCSV}>
+            <button type="button" className="download-btn" onClick={descargarExcel}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
               </svg>
-              Descargar CSV
+              Descargar Excel
             </button>
           </div>
           <table>
