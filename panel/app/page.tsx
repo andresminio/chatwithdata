@@ -309,7 +309,7 @@ export default function Home() {
                 <>Mostrando los primeros {resultado.limite ?? resultado.filas.length} de más resultados.</>
               )}{" "}
               Para el total exacto usá el filtro <strong>Totales</strong>, o agregá más filtros
-              para acotar la búsqueda.
+              para acotar la consulta.
             </div>
           )}
         </div>
@@ -579,11 +579,12 @@ export default function Home() {
           font: inherit;
           color: var(--accent);
           font-weight: 600;
-          text-decoration: underline;
+          text-decoration: none;
           cursor: pointer;
         }
         .reporte-link:hover {
           color: var(--accent-2);
+          text-decoration: underline;
         }
         .fade-in {
           display: inline-block;

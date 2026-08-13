@@ -211,18 +211,24 @@ export async function POST(req: NextRequest) {
         "remitiendo a la tabla para el resto, por ejemplo 'El detalle completo por distrito " +
         "está en la tabla debajo'. Evitá otros símbolos de markdown (títulos, tablas, " +
         "comillas de cita). Si el prompt indica 'Resultados truncados: sí', el total real de " +
-        "registros que cumplen la consulta es mayor a las filas que ves — te paso ese total, " +
-        "mencionalo explícitamente (por ejemplo 'hay X registros en total, se muestran los " +
-        "primeros N') y NO calcules ni afirmes totales, sumas, porcentajes o conteos propios a " +
-        "partir de las filas parciales: usá el total que te paso, no el que resulte de contar " +
-        "las filas mostradas. Si la pregunta pedía un total o una cantidad, aclará que para eso " +
-        "conviene usar el modo \"Totales\" en vez de \"Listado\".",
+        "registros que cumplen la consulta es mayor a los que se muestran en la tabla — te " +
+        "paso ese total y la cantidad exacta que ve el usuario en la tabla ('Filas que el " +
+        "usuario ve en la tabla'), mencionalos explícitamente (por ejemplo 'hay X registros " +
+        "en total, se muestran los primeros N') usando ESOS números tal cual te los paso. " +
+        "NO calcules ni afirmes totales, sumas, porcentajes o conteos propios a partir de las " +
+        "filas parciales, y NO uses la cantidad de filas de muestra que te paso a vos más " +
+        "abajo como si fuera lo que ve el usuario: son cosas distintas (a vos te paso menos " +
+        "filas de muestra, por espacio, pero el usuario ve más en su tabla). Si la pregunta " +
+        "pedía un total o una cantidad, aclará que para eso conviene usar el modo \"Totales\" " +
+        "en vez de \"Listado\", y sugerí además acotar la búsqueda filtrando por año electoral, " +
+        "etapa (PASO/Generales) o distrito si la pregunta no los especificaba ya.",
       prompt: [
         `Pregunta original: ${pregunta}`,
         `SQL ejecutado: ${validacion.sql}`,
         `Resultados truncados: ${truncado ? "sí" : "no"}`,
         `Total real de registros que cumplen la consulta: ${total ?? "desconocido"}`,
-        `Filas devueltas (máximo ${LIMITE_FILAS_PARA_REDACCION} mostradas de ${filas.length}):`,
+        `Filas que el usuario ve en la tabla debajo de tu respuesta: ${filas.length}`,
+        `Muestra de esas filas para que redactes (son ${Math.min(LIMITE_FILAS_PARA_REDACCION, filas.length)} de las ${filas.length} que el usuario ve en la tabla, no la cantidad total):`,
         JSON.stringify(filas.slice(0, LIMITE_FILAS_PARA_REDACCION), null, 2),
       ].join("\n\n"),
       providerOptions: SIN_RAZONAMIENTO_PROFUNDO,

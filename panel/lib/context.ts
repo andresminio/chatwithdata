@@ -52,6 +52,20 @@ export const REGLAS_SQL = `
   exacta contra un único valor (ver diccionario, sección 7). Devolver la
   columna agrupacion en el SELECT para que las variantes que matchearon
   queden visibles.
+- Modo Listado (la pregunta dice "Dame el listado completo con el detalle
+  de cada candidatura, no solo el total"): el SELECT tiene que traer
+  exactamente estas columnas, en este orden, ni una más ni una menos salvo
+  que la pregunta pida explícitamente menos campos:
+    anio, etapa, distrito, cargo, agrupacion, caracter AS subcategoria,
+    posicion, apellido, nombres
+  Excepción: si el resultado puede incluir etapa PASO (la pregunta filtra
+  por PASO, o no filtra etapa y por lo tanto puede traer PASO), agregar
+  también la columna lista inmediatamente después de agrupacion:
+    anio, etapa, distrito, cargo, agrupacion, lista, caracter AS subcategoria,
+    posicion, apellido, nombres
+  Esta regla de columnas fijas NO aplica al modo Totales (agregaciones con
+  COUNT/GROUP BY): ahí las columnas del SELECT dependen de por qué se pide
+  desglosar.
 `.trim();
 
 export const CASOS_LIMITE = `
