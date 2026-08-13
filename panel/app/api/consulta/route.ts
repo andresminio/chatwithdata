@@ -211,15 +211,19 @@ export async function POST(req: NextRequest) {
         "remitiendo a la tabla para el resto, por ejemplo 'El detalle completo por distrito " +
         "está en la tabla debajo'. Evitá otros símbolos de markdown (títulos, tablas, " +
         "comillas de cita). Si el prompt indica 'Resultados truncados: sí' (y SOLO en ese " +
-        "caso): el total real de registros que cumplen la consulta es mayor a los que se " +
-        "muestran en la tabla — te paso ese total y la cantidad exacta que ve el usuario en " +
-        "la tabla ('Filas que el usuario ve en la tabla'), mencionalos explícitamente (por " +
-        "ejemplo 'hay X registros en total, se muestran los primeros N') usando ESOS números " +
-        "tal cual te los paso. NO calcules ni afirmes totales, sumas, porcentajes o conteos " +
-        "propios a partir de las filas parciales, y NO uses la cantidad de filas de muestra " +
-        "que te paso a vos más abajo como si fuera lo que ve el usuario: son cosas distintas " +
-        "(a vos te paso menos filas de muestra, por espacio, pero el usuario ve más en su " +
-        "tabla). Si además la pregunta pedía un total o una cantidad, aclará ahí mismo que " +
+        "caso): te paso 'Cantidad total de filas/categorías que devuelve la consulta " +
+        "completa' — es un CONTEO DE FILAS de la consulta sin el límite de la tabla, NO es " +
+        "una suma de ninguna columna (por ejemplo, si la consulta agrupa por distrito, ese " +
+        "número es la cantidad de distritos que hay en total, no la suma de candidatos de " +
+        "todos ellos). Junto con la cantidad exacta que ve el usuario en la tabla ('Filas " +
+        "que el usuario ve en la tabla'), mencioná ambos números explícitamente (por ejemplo " +
+        "'la consulta completa tiene X filas/categorías, se muestran las primeras N') usando " +
+        "ESOS números tal cual te los paso. NO calcules ni afirmes totales, sumas, " +
+        "porcentajes o conteos propios a partir de las filas parciales, y NO uses la cantidad " +
+        "de filas de muestra que te paso a vos más abajo como si fuera lo que ve el usuario: " +
+        "son cosas distintas (a vos te paso menos filas de muestra, por espacio, pero el " +
+        "usuario ve más en su tabla). Si además la pregunta pedía un total o una cantidad, " +
+        "aclará ahí mismo que " +
         "para eso conviene usar el modo \"Totales\" en vez de \"Listado\", y sugerí acotar la " +
         "consulta filtrando por año electoral, etapa (PASO/Generales) o distrito si la " +
         "pregunta no los especificaba ya. Si el prompt indica 'Resultados truncados: no', NO " +
@@ -230,7 +234,17 @@ export async function POST(req: NextRequest) {
         `Pregunta original: ${pregunta}`,
         `SQL ejecutado: ${validacion.sql}`,
         `Resultados truncados: ${truncado ? "sí" : "no"}`,
-        `Total real de registros que cumplen la consulta: ${total ?? "desconocido"}`,
+        // Solo se manda esta línea cuando SÍ hay truncamiento: si no, es un
+        // número que puede confundir (por ejemplo, en una consulta agrupada
+        // por distrito, coincide con la cantidad de distritos, no con la
+        // suma de candidatos — y el modelo lo mezcló con eso una vez).
+        ...(truncado
+          ? [
+              `Cantidad total de filas/categorías que devuelve la consulta completa, sin el ` +
+                `límite de la tabla (esto es un CONTEO DE FILAS, no la suma de ninguna ` +
+                `columna): ${total ?? "desconocido"}`,
+            ]
+          : []),
         `Filas que el usuario ve en la tabla debajo de tu respuesta: ${filas.length}`,
         `Muestra de esas filas para que redactes (son ${Math.min(LIMITE_FILAS_PARA_REDACCION, filas.length)} de las ${filas.length} que el usuario ve en la tabla, no la cantidad total):`,
         JSON.stringify(filas.slice(0, LIMITE_FILAS_PARA_REDACCION), null, 2),
