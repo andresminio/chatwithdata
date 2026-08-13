@@ -74,7 +74,9 @@ const NIVEL1 = [
 ];
 
 // Nivel 2: depende de qué se eligió en el nivel 1. Se puede combinar más de
-// uno (por ejemplo Por distrito + Por género + 2025 juntos).
+// uno (por ejemplo Por distrito + Por género + un año elegido juntos).
+const ELEGIR_ANIO = "Elegir un año";
+
 const SUBFILTROS: Record<string, { label: string; instruccion: string }[]> = {
   Listado: [
     { label: "Presidente y Vice", instruccion: "Limitalo al cargo Presidente y Vice." },
@@ -82,7 +84,7 @@ const SUBFILTROS: Record<string, { label: string; instruccion: string }[]> = {
     { label: "Senadores", instruccion: "Limitalo al cargo Senadores Nacionales." },
     { label: "PASO", instruccion: "Limitalo a la etapa PASO." },
     { label: "Generales", instruccion: "Limitalo a la etapa Generales." },
-    { label: "2025", instruccion: "Limitalo al año electoral 2025." },
+    { label: ELEGIR_ANIO, instruccion: "" },
   ],
   Totales: [
     { label: "Por distrito", instruccion: "Desglosalo por distrito." },
@@ -90,14 +92,21 @@ const SUBFILTROS: Record<string, { label: string; instruccion: string }[]> = {
     { label: "Por cargo", instruccion: "Desglosalo por cargo." },
     { label: "PASO", instruccion: "Limitalo a la etapa PASO." },
     { label: "Generales", instruccion: "Limitalo a la etapa Generales." },
-    { label: "2025", instruccion: "Limitalo al año electoral 2025." },
+    { label: ELEGIR_ANIO, instruccion: "" },
   ],
 };
+
+// Años electorales disponibles y en cuáles NO hubo PASO (ver CASOS_LIMITE en
+// lib/context.ts): si PASO está activo, esos años no se ofrecen para elegir,
+// y viceversa, para no armar una combinación sin sentido desde el UI.
+const ANIOS = ["2011", "2013", "2015", "2017", "2019", "2021", "2023", "2025"];
+const ANIOS_SIN_PASO = new Set(["2025"]);
 
 export default function Home() {
   const [pregunta, setPregunta] = useState("");
   const [nivel1Activo, setNivel1Activo] = useState<string | null>(null);
   const [subfiltrosActivos, setSubfiltrosActivos] = useState<string[]>([]);
+  const [anioActivo, setAnioActivo] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const [resultado, setResultado] = useState<RespuestaConsulta | null>(null);
   const [reportado, setReportado] = useState(false);
@@ -135,12 +144,21 @@ export default function Home() {
   function toggleNivel1(label: string) {
     setNivel1Activo((actual) => (actual === label ? null : label));
     setSubfiltrosActivos([]); // las opciones de nivel 2 cambian según el nivel 1
+    setAnioActivo(null);
   }
 
   function toggleSubfiltro(label: string) {
+    const seEstaDesactivando = subfiltrosActivos.includes(label);
     setSubfiltrosActivos((actuales) =>
-      actuales.includes(label) ? actuales.filter((l) => l !== label) : [...actuales, label]
+      seEstaDesactivando ? actuales.filter((l) => l !== label) : [...actuales, label]
     );
+    if (label === ELEGIR_ANIO && seEstaDesactivando) {
+      setAnioActivo(null); // se ocultó la fila de años: no dejar uno elegido "fantasma"
+    }
+  }
+
+  function elegirAnio(anio: string) {
+    setAnioActivo((actual) => (actual === anio ? null : anio));
   }
 
   async function consultar() {
@@ -150,7 +168,10 @@ export default function Home() {
     const opciones = nivel1Activo ? SUBFILTROS[nivel1Activo] : [];
     const instrucciones = [
       ...(filtro1 ? [filtro1.instruccion] : []),
-      ...opciones.filter((f) => subfiltrosActivos.includes(f.label)).map((f) => f.instruccion),
+      ...opciones
+        .filter((f) => f.label !== ELEGIR_ANIO && subfiltrosActivos.includes(f.label))
+        .map((f) => f.instruccion),
+      ...(anioActivo ? [`Limitalo al año electoral ${anioActivo}.`] : []),
     ];
     const texto = instrucciones.length ? `${base} (${instrucciones.join(" ")})` : base;
     setCargando(true);
@@ -226,17 +247,57 @@ export default function Home() {
           </button>
         ))}
         {nivel1Activo &&
-          SUBFILTROS[nivel1Activo].map((f) => (
-            <button
-              key={f.label}
-              className={`chip${subfiltrosActivos.includes(f.label) ? " chip-activo" : ""}`}
-              onClick={() => toggleSubfiltro(f.label)}
-              disabled={cargando}
-            >
-              {f.label}
-            </button>
-          ))}
+          SUBFILTROS[nivel1Activo]
+            // Si ya se eligió un año sin PASO, no ofrecer PASO — salvo que
+            // Generales también esté activo: ahí la etapa ya no es solo
+            // PASO, así que el año sigue teniendo sentido (ver ANIOS_SIN_PASO).
+            .filter(
+              (f) =>
+                !(
+                  f.label === "PASO" &&
+                  anioActivo &&
+                  ANIOS_SIN_PASO.has(anioActivo) &&
+                  !subfiltrosActivos.includes("Generales")
+                )
+            )
+            .map((f) => (
+              <button
+                key={f.label}
+                className={`chip${subfiltrosActivos.includes(f.label) ? " chip-activo" : ""}`}
+                onClick={() => toggleSubfiltro(f.label)}
+                disabled={cargando}
+              >
+                {f.label}
+              </button>
+            ))}
       </div>
+
+      {nivel1Activo && subfiltrosActivos.includes(ELEGIR_ANIO) && (
+        <div className="chips chips-anios">
+          {ANIOS
+            // Si PASO está activo solo (sin Generales), no ofrecer años en
+            // los que no hubo PASO. Si Generales también está activo, la
+            // etapa ya cubre ambos casos y el año vuelve a tener sentido.
+            .filter(
+              (anio) =>
+                !(
+                  subfiltrosActivos.includes("PASO") &&
+                  !subfiltrosActivos.includes("Generales") &&
+                  ANIOS_SIN_PASO.has(anio)
+                )
+            )
+            .map((anio) => (
+              <button
+                key={anio}
+                className={`chip${anioActivo === anio ? " chip-activo" : ""}`}
+                onClick={() => elegirAnio(anio)}
+                disabled={cargando}
+              >
+                {anio}
+              </button>
+            ))}
+        </div>
+      )}
 
       {resultado?.error && (
         <div className="error-card">
@@ -492,6 +553,13 @@ export default function Home() {
           gap: 8px;
           flex-wrap: wrap;
           margin-bottom: 32px;
+        }
+        .chips-anios {
+          margin-top: -20px;
+        }
+        .chips-anios .chip {
+          font-size: 11px;
+          padding: 5px 11px;
         }
         .chip {
           font-size: 12px;
