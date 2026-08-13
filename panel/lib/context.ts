@@ -32,6 +32,12 @@ Columnas:
 - genero          text      'F' | 'M'
 - dni             text
 - fecha_nacimiento date
+- id_candidato    text      identificador único de persona candidata. Usar
+                             SIEMPRE que haya que distinguir o agrupar por
+                             persona a través de distintas filas/elecciones
+                             (ver regla en REGLAS_SQL). NO usar apellido+nombres
+                             para eso: puede repetirse entre personas distintas
+                             o variar en la escritura de la misma persona.
 
 NO existen: resultados electorales, votos, quién ganó, quién resultó electo,
 padrón, afiliaciones, autoridades de mesa, financiamiento, participación de
@@ -45,9 +51,18 @@ export const REGLAS_SQL = `
 - Incluir siempre LIMIT (200 si la pregunta no pide un número puntual).
 - No usar punto y coma múltiple, comentarios SQL, ni DDL/DML de ningún tipo.
 - Si la pregunta es ambigua entre "candidaturas" (filas) y "personas"
-  (individuos), preferir contar personas con COUNT(DISTINCT dni) cuando la
-  pregunta use lenguaje de personas ("cuántas mujeres se postularon") y
-  filas cuando use lenguaje de postulaciones ("cuántas candidaturas hubo").
+  (individuos), preferir contar personas con COUNT(DISTINCT id_candidato)
+  cuando la pregunta use lenguaje de personas ("cuántas mujeres se
+  postularon") y filas cuando use lenguaje de postulaciones ("cuántas
+  candidaturas hubo").
+- Preguntas sobre repetición o frecuencia de una misma persona a través de
+  varias elecciones (ej. "qué candidatos se presentaron más veces", "quiénes
+  se postularon en más de una elección"): agrupar por id_candidato, NUNCA
+  por apellido+nombres. Dos personas distintas pueden compartir apellido y
+  nombre, y la misma persona puede tener variantes de escritura entre
+  elecciones — solo id_candidato identifica de forma confiable a la misma
+  persona. Para mostrar el resultado igual conviene traer apellido y nombres
+  (con MAX() o similar) junto al id_candidato y su conteo.
 - Filtros por nombre de agrupación: usar ILIKE con patrón, nunca igualdad
   exacta contra un único valor (ver diccionario, sección 7). Devolver la
   columna agrupacion en el SELECT para que las variantes que matchearon
