@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
   }
 
   // --- Paso 6: ejecutar contra Postgres ------------------------------------
-  const limite = validacion.limite ?? 200;
+  const limite = validacion.limite ?? 1000;
   let filas: Record<string, unknown>[];
   try {
     const resultado = await ejecutarSelect(validacion.sql);
@@ -237,13 +237,13 @@ export async function POST(req: NextRequest) {
         "de filas de muestra que te paso a vos más abajo como si fuera lo que ve el usuario: " +
         "son cosas distintas (a vos te paso menos filas de muestra, por espacio, pero el " +
         "usuario ve más en su tabla). Si además la pregunta pedía un total o una cantidad, " +
-        "aclará ahí mismo que " +
-        "para eso conviene usar el modo \"Totales\" en vez de \"Listado\", y sugerí acotar la " +
-        "consulta filtrando por año electoral, etapa (PASO/Generales) o distrito si la " +
-        "pregunta no los especificaba ya. Si el prompt indica 'Resultados truncados: no', NO " +
-        "sugieras cambiar de modo ni menciones el modo \"Totales\" en ningún caso: la " +
-        "respuesta ya es completa tal cual, sea que la pregunta haya usado el modo Listado o " +
-        "el modo Totales.",
+        "agregá un PÁRRAFO APARTE (dejá una línea en blanco antes, no lo continúes en el " +
+        "mismo párrafo) con exactamente este texto: 'Para obtener una cantidad o un total " +
+        "específico, conviene usar el modo \"Totales\" en vez de \"Listado\", y se sugiere " +
+        "acotar la consulta filtrando por año electoral, etapa o distrito.' Si el prompt " +
+        "indica 'Resultados truncados: no', NO agregues ese párrafo ni menciones el modo " +
+        "\"Totales\" en ningún caso: la respuesta ya es completa tal cual, sea que la " +
+        "pregunta haya usado el modo Listado o el modo Totales.",
       prompt: [
         `Pregunta original: ${pregunta}`,
         `SQL ejecutado: ${validacion.sql}`,

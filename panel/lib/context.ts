@@ -46,7 +46,7 @@ pide algo de esta lista, NO generar SQL: es fuera de alcance.
 export const REGLAS_SQL = `
 - Generar únicamente una sentencia SELECT, de solo lectura.
 - Solo se puede referenciar v_candidaturas. No hay otras tablas ni joins posibles.
-- Incluir siempre LIMIT (200 si la pregunta no pide un número puntual).
+- Incluir siempre LIMIT (1000 si la pregunta no pide un número puntual).
 - No usar punto y coma múltiple, comentarios SQL, ni DDL/DML de ningún tipo.
 - Si la pregunta es ambigua entre "candidaturas" (filas) y "personas"
   (individuos), preferir contar personas con COUNT(DISTINCT id_candidato)

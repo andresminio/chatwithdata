@@ -72,11 +72,11 @@ export function validarSql(sqlCrudo: string): ResultadoValidacion {
 
   // Forzar LIMIT si el modelo se lo olvidó.
   if (!/\blimit\s+\d+/i.test(sql)) {
-    sql = `${sql} LIMIT 200`;
+    sql = `${sql} LIMIT 1000`;
   }
 
   const matchLimite = sql.match(/\blimit\s+(\d+)/i);
-  const limite = matchLimite ? parseInt(matchLimite[1], 10) : 200;
+  const limite = matchLimite ? parseInt(matchLimite[1], 10) : 1000;
 
   return { valido: true, sql, limite };
 }

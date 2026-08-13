@@ -32,18 +32,28 @@ function formatearRespuesta(texto: string) {
       );
     });
 
-  const lineas = texto.split("\n").filter((l) => l.trim() !== "");
+  // Una línea en blanco fuerza un párrafo nuevo (en vez de seguir juntando
+  // con <br/>), así el modelo puede separar ideas en párrafos distintos
+  // dejando una línea vacía en el texto.
+  const lineasCrudas = texto.split("\n");
   const bloques: { tipo: "parrafo" | "lista"; lineas: string[] }[] = [];
-  for (const linea of lineas) {
-    const esItem = /^[-*]\s+/.test(linea.trim());
+  let forzarBloqueNuevo = true;
+  for (const lineaCruda of lineasCrudas) {
+    const linea = lineaCruda.trim();
+    if (linea === "") {
+      forzarBloqueNuevo = true;
+      continue;
+    }
+    const esItem = /^[-*]\s+/.test(linea);
     const tipo = esItem ? "lista" : "parrafo";
-    const contenido = esItem ? linea.trim().replace(/^[-*]\s+/, "") : linea.trim();
+    const contenido = esItem ? linea.replace(/^[-*]\s+/, "") : linea;
     const ultimo = bloques[bloques.length - 1];
-    if (ultimo && ultimo.tipo === tipo) {
+    if (!forzarBloqueNuevo && ultimo && ultimo.tipo === tipo) {
       ultimo.lineas.push(contenido);
     } else {
       bloques.push({ tipo, lineas: [contenido] });
     }
+    forzarBloqueNuevo = false;
   }
 
   return bloques.map((bloque, i) =>
@@ -152,6 +162,11 @@ const CARGOS = [
   { valor: "PARLAMENTARIOS DEL MERCOSUR", etiqueta: "Parlamentarios del Mercosur" },
 ];
 
+// La tabla en pantalla pagina de a esto (el Excel descargable siempre trae
+// todas las filas juntas en una sola hoja — acá es solo para no scrollear
+// una lista larguísima).
+const FILAS_POR_PAGINA = 50;
+
 export default function Home() {
   const [pregunta, setPregunta] = useState("");
   const [nivel1Activo, setNivel1Activo] = useState<string | null>(null);
@@ -164,6 +179,7 @@ export default function Home() {
   const [cargando, setCargando] = useState(false);
   const [resultado, setResultado] = useState<RespuestaConsulta | null>(null);
   const [reportado, setReportado] = useState(false);
+  const [paginaActual, setPaginaActual] = useState(1);
 
   async function reportarProblema() {
     if (reportado || !resultado?.logId) return;
@@ -304,6 +320,7 @@ export default function Home() {
     setCargando(true);
     setResultado(null);
     setReportado(false);
+    setPaginaActual(1);
     try {
       const res = await fetch("/api/consulta", {
         method: "POST",
@@ -326,6 +343,15 @@ export default function Home() {
   }
 
   const columnas = resultado?.filas?.[0] ? Object.keys(resultado.filas[0]) : [];
+  const totalPaginas = resultado?.filas
+    ? Math.max(1, Math.ceil(resultado.filas.length / FILAS_POR_PAGINA))
+    : 1;
+  const filasPagina = resultado?.filas
+    ? resultado.filas.slice(
+        (paginaActual - 1) * FILAS_POR_PAGINA,
+        paginaActual * FILAS_POR_PAGINA
+      )
+    : [];
 
   return (
     <main className="wrap">
@@ -585,8 +611,8 @@ export default function Home() {
               </tr>
             </thead>
             <tbody>
-              {resultado.filas.map((fila, i) => (
-                <tr key={i}>
+              {filasPagina.map((fila, i) => (
+                <tr key={(paginaActual - 1) * FILAS_POR_PAGINA + i}>
                   {columnas.map((c) => (
                     <td key={c} className={typeof fila[c] === "number" ? "num" : undefined}>
                       {String(fila[c] ?? "")}
@@ -596,6 +622,29 @@ export default function Home() {
               ))}
             </tbody>
           </table>
+          {totalPaginas > 1 && (
+            <div className="table-paginacion">
+              <button
+                type="button"
+                className="pagina-btn"
+                onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
+                disabled={paginaActual === 1}
+              >
+                ← Anterior
+              </button>
+              <span className="pagina-info">
+                Página {paginaActual} de {totalPaginas}
+              </span>
+              <button
+                type="button"
+                className="pagina-btn"
+                onClick={() => setPaginaActual((p) => Math.min(totalPaginas, p + 1))}
+                disabled={paginaActual === totalPaginas}
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
           {resultado.truncado && (
             <div className="table-truncado">
               {resultado.total != null ? (
@@ -1075,6 +1124,37 @@ export default function Home() {
         }
         tbody tr:hover {
           background: #fbfbfe;
+        }
+        .table-paginacion {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+          padding: 10px 18px;
+          border-top: 1px solid var(--border);
+          background: #fafaff;
+        }
+        .pagina-btn {
+          padding: 6px 12px;
+          border-radius: 8px;
+          border: 1px solid var(--border);
+          background: #fff;
+          color: var(--ink);
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+        .pagina-btn:hover:not(:disabled) {
+          border-color: var(--accent);
+          color: var(--accent);
+        }
+        .pagina-btn:disabled {
+          opacity: 0.4;
+          cursor: default;
+        }
+        .pagina-info {
+          font-size: 12px;
+          color: var(--ink-soft);
         }
         .table-truncado {
           padding: 10px 18px;
