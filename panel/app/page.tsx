@@ -90,11 +90,15 @@ const SUBFILTROS: Record<string, { label: string; instruccion: string }[]> = {
     { label: "Por distrito", instruccion: "Desglosalo por distrito." },
     { label: "Por género", instruccion: "Desglosalo por género." },
     { label: "Por cargo", instruccion: "Desglosalo por cargo." },
-    { label: "PASO", instruccion: "Limitalo a la etapa PASO." },
-    { label: "Generales", instruccion: "Limitalo a la etapa Generales." },
+    { label: "Por etapa", instruccion: "" },
     { label: ELEGIR_ANIO, instruccion: "" },
   ],
 };
+
+// Segunda línea de "Por etapa" (Totales): a diferencia de año/distrito/
+// género/cargo, acá se puede elegir más de una etapa a la vez (PASO y
+// Generales juntas es una combinación válida, no una contradicción).
+const ETAPAS = ["PASO", "Generales"];
 
 // Años electorales disponibles y en cuáles NO hubo PASO (ver CASOS_LIMITE en
 // lib/context.ts): si PASO está activo, esos años no se ofrecen para elegir,
@@ -152,6 +156,7 @@ export default function Home() {
   const [distritoActivo, setDistritoActivo] = useState<string | null>(null);
   const [generoActivo, setGeneroActivo] = useState<string | null>(null);
   const [cargoActivo, setCargoActivo] = useState<string | null>(null);
+  const [etapasActivas, setEtapasActivas] = useState<string[]>([]);
   const [cargando, setCargando] = useState(false);
   const [resultado, setResultado] = useState<RespuestaConsulta | null>(null);
   const [reportado, setReportado] = useState(false);
@@ -193,6 +198,7 @@ export default function Home() {
     setDistritoActivo(null);
     setGeneroActivo(null);
     setCargoActivo(null);
+    setEtapasActivas([]);
   }
 
   function toggleSubfiltro(label: string) {
@@ -206,6 +212,7 @@ export default function Home() {
       if (label === "Por distrito") setDistritoActivo(null);
       if (label === "Por género") setGeneroActivo(null);
       if (label === "Por cargo") setCargoActivo(null);
+      if (label === "Por etapa") setEtapasActivas([]);
     }
   }
 
@@ -225,6 +232,20 @@ export default function Home() {
     setCargoActivo((actual) => (actual === cargo ? null : cargo));
   }
 
+  function toggleEtapa(etapa: string) {
+    setEtapasActivas((actuales) =>
+      actuales.includes(etapa) ? actuales.filter((e) => e !== etapa) : [...actuales, etapa]
+    );
+  }
+
+  // PASO/Generales viven en dos lugares distintos según el modo: en Listado
+  // son chips directos (subfiltrosActivos); en Totales están anidados bajo
+  // "Por etapa" (etapasActivas). Este helper unifica la consulta para la
+  // lógica de años sin PASO, que es compartida por ambos modos.
+  function etapaEstaActiva(etapa: string): boolean {
+    return nivel1Activo === "Totales" ? etapasActivas.includes(etapa) : subfiltrosActivos.includes(etapa);
+  }
+
   async function consultar() {
     const base = pregunta.trim();
     if (!base) return;
@@ -233,7 +254,13 @@ export default function Home() {
     // "Por distrito", "Por género" y "Por cargo" son segmentación (desglose)
     // si no se elige un valor puntual, y pasan a ser filtro si se elige
     // uno — por eso quedan afuera del mapeo genérico y se arman a mano.
-    const ETIQUETAS_CON_VALOR_ELEGIBLE = [ELEGIR_ANIO, "Por distrito", "Por género", "Por cargo"];
+    const ETIQUETAS_CON_VALOR_ELEGIBLE = [
+      ELEGIR_ANIO,
+      "Por distrito",
+      "Por género",
+      "Por cargo",
+      "Por etapa",
+    ];
     const cargoEtiqueta = CARGOS.find((c) => c.valor === cargoActivo)?.etiqueta ?? cargoActivo;
     const instrucciones = [
       ...(filtro1 ? [filtro1.instruccion] : []),
@@ -251,6 +278,11 @@ export default function Home() {
         : []),
       ...(subfiltrosActivos.includes("Por cargo")
         ? [cargoActivo ? `Limitalo al cargo ${cargoEtiqueta}.` : "Desglosalo por cargo."]
+        : []),
+      ...(subfiltrosActivos.includes("Por etapa")
+        ? etapasActivas.length > 0
+          ? etapasActivas.map((e) => `Limitalo a la etapa ${e}.`)
+          : ["Desglosalo por etapa."]
         : []),
     ];
     const texto = instrucciones.length ? `${base} (${instrucciones.join(" ")})` : base;
@@ -358,13 +390,11 @@ export default function Home() {
             // Si PASO está activo solo (sin Generales), no ofrecer años en
             // los que no hubo PASO. Si Generales también está activo, la
             // etapa ya cubre ambos casos y el año vuelve a tener sentido.
+            // (En Totales, PASO/Generales viven bajo "Por etapa" — ver
+            // etapaEstaActiva.)
             .filter(
               (anio) =>
-                !(
-                  subfiltrosActivos.includes("PASO") &&
-                  !subfiltrosActivos.includes("Generales") &&
-                  ANIOS_SIN_PASO.has(anio)
-                )
+                !(etapaEstaActiva("PASO") && !etapaEstaActiva("Generales") && ANIOS_SIN_PASO.has(anio))
             )
             .map((anio) => (
               <button
@@ -421,6 +451,25 @@ export default function Home() {
               {cargo.etiqueta}
             </button>
           ))}
+        </div>
+      )}
+
+      {nivel1Activo && subfiltrosActivos.includes("Por etapa") && (
+        <div className="chips chips-sub">
+          {ETAPAS
+            // Si ya se eligió un año sin PASO, no ofrecer PASO acá tampoco
+            // (mismo criterio que en la fila de años).
+            .filter((etapa) => !(etapa === "PASO" && anioActivo && ANIOS_SIN_PASO.has(anioActivo)))
+            .map((etapa) => (
+              <button
+                key={etapa}
+                className={`chip${etapasActivas.includes(etapa) ? " chip-activo" : ""}`}
+                onClick={() => toggleEtapa(etapa)}
+                disabled={cargando}
+              >
+                {etapa}
+              </button>
+            ))}
         </div>
       )}
 
