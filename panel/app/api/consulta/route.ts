@@ -210,18 +210,22 @@ export async function POST(req: NextRequest) {
         "total general y como máximo destacá las 2 o 3 categorías con mayor valor, y cerrá " +
         "remitiendo a la tabla para el resto, por ejemplo 'El detalle completo por distrito " +
         "está en la tabla debajo'. Evitá otros símbolos de markdown (títulos, tablas, " +
-        "comillas de cita). Si el prompt indica 'Resultados truncados: sí', el total real de " +
-        "registros que cumplen la consulta es mayor a los que se muestran en la tabla — te " +
-        "paso ese total y la cantidad exacta que ve el usuario en la tabla ('Filas que el " +
-        "usuario ve en la tabla'), mencionalos explícitamente (por ejemplo 'hay X registros " +
-        "en total, se muestran los primeros N') usando ESOS números tal cual te los paso. " +
-        "NO calcules ni afirmes totales, sumas, porcentajes o conteos propios a partir de las " +
-        "filas parciales, y NO uses la cantidad de filas de muestra que te paso a vos más " +
-        "abajo como si fuera lo que ve el usuario: son cosas distintas (a vos te paso menos " +
-        "filas de muestra, por espacio, pero el usuario ve más en su tabla). Si la pregunta " +
-        "pedía un total o una cantidad, aclará que para eso conviene usar el modo \"Totales\" " +
-        "en vez de \"Listado\", y sugerí además acotar la búsqueda filtrando por año electoral, " +
-        "etapa (PASO/Generales) o distrito si la pregunta no los especificaba ya.",
+        "comillas de cita). Si el prompt indica 'Resultados truncados: sí' (y SOLO en ese " +
+        "caso): el total real de registros que cumplen la consulta es mayor a los que se " +
+        "muestran en la tabla — te paso ese total y la cantidad exacta que ve el usuario en " +
+        "la tabla ('Filas que el usuario ve en la tabla'), mencionalos explícitamente (por " +
+        "ejemplo 'hay X registros en total, se muestran los primeros N') usando ESOS números " +
+        "tal cual te los paso. NO calcules ni afirmes totales, sumas, porcentajes o conteos " +
+        "propios a partir de las filas parciales, y NO uses la cantidad de filas de muestra " +
+        "que te paso a vos más abajo como si fuera lo que ve el usuario: son cosas distintas " +
+        "(a vos te paso menos filas de muestra, por espacio, pero el usuario ve más en su " +
+        "tabla). Si además la pregunta pedía un total o una cantidad, aclará ahí mismo que " +
+        "para eso conviene usar el modo \"Totales\" en vez de \"Listado\", y sugerí acotar la " +
+        "consulta filtrando por año electoral, etapa (PASO/Generales) o distrito si la " +
+        "pregunta no los especificaba ya. Si el prompt indica 'Resultados truncados: no', NO " +
+        "sugieras cambiar de modo ni menciones el modo \"Totales\" en ningún caso: la " +
+        "respuesta ya es completa tal cual, sea que la pregunta haya usado el modo Listado o " +
+        "el modo Totales.",
       prompt: [
         `Pregunta original: ${pregunta}`,
         `SQL ejecutado: ${validacion.sql}`,
