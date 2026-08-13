@@ -76,6 +76,7 @@ const NIVEL1 = [
 // Nivel 2: depende de qué se eligió en el nivel 1. Se puede combinar más de
 // uno (por ejemplo Por distrito + Por género + un año elegido juntos).
 const ELEGIR_ANIO = "Elegir un año";
+const ELEGIR_DISTRITO = "Elegir un distrito";
 
 const SUBFILTROS: Record<string, { label: string; instruccion: string }[]> = {
   Listado: [
@@ -85,6 +86,9 @@ const SUBFILTROS: Record<string, { label: string; instruccion: string }[]> = {
     { label: "PASO", instruccion: "Limitalo a la etapa PASO." },
     { label: "Generales", instruccion: "Limitalo a la etapa Generales." },
     { label: ELEGIR_ANIO, instruccion: "" },
+    // Al final: reusa el mismo estado/filas desplegables que "Por distrito"
+    // en Totales, pero acá es filtro puro (no hay "desglose" en un listado).
+    { label: ELEGIR_DISTRITO, instruccion: "" },
   ],
   Totales: [
     { label: "Por distrito", instruccion: "Desglosalo por distrito." },
@@ -209,7 +213,7 @@ export default function Home() {
     if (seEstaDesactivando) {
       // se ocultó la fila de opciones: no dejar una elección "fantasma"
       if (label === ELEGIR_ANIO) setAnioActivo(null);
-      if (label === "Por distrito") setDistritoActivo(null);
+      if (label === "Por distrito" || label === ELEGIR_DISTRITO) setDistritoActivo(null);
       if (label === "Por género") setGeneroActivo(null);
       if (label === "Por cargo") setCargoActivo(null);
       if (label === "Por etapa") setEtapasActivas([]);
@@ -256,6 +260,7 @@ export default function Home() {
     // uno — por eso quedan afuera del mapeo genérico y se arman a mano.
     const ETIQUETAS_CON_VALOR_ELEGIBLE = [
       ELEGIR_ANIO,
+      ELEGIR_DISTRITO,
       "Por distrito",
       "Por género",
       "Por cargo",
@@ -270,12 +275,22 @@ export default function Home() {
         )
         .map((f) => f.instruccion),
       ...(anioActivo ? [`Limitalo al año electoral ${anioActivo}.`] : []),
-      ...(subfiltrosActivos.includes("Por distrito")
-        ? [distritoActivo ? `Limitalo al distrito ${distritoActivo}.` : "Desglosalo por distrito."]
+      // Por distrito (Totales) / Elegir un distrito (Listado): en Totales,
+      // sin valor elegido es desglose; en Listado no hay desglose posible,
+      // así que sin valor elegido no se agrega ninguna instrucción (el chip
+      // queda "abierto" esperando que se elija una provincia).
+      ...(subfiltrosActivos.includes("Por distrito") || subfiltrosActivos.includes(ELEGIR_DISTRITO)
+        ? distritoActivo
+          ? [`Limitalo al distrito ${distritoActivo}.`]
+          : nivel1Activo === "Totales"
+            ? ["Desglosalo por distrito."]
+            : []
         : []),
-      ...(subfiltrosActivos.includes("Por género")
-        ? [generoActivo ? `Limitalo al género ${generoActivo}.` : "Desglosalo por género."]
-        : []),
+      ...(subfiltrosActivos.includes("Por género") && generoActivo
+        ? [`Limitalo al género ${generoActivo}.`]
+        : subfiltrosActivos.includes("Por género") && nivel1Activo === "Totales"
+          ? ["Desglosalo por género."]
+          : []),
       ...(subfiltrosActivos.includes("Por cargo")
         ? [cargoActivo ? `Limitalo al cargo ${cargoEtiqueta}.` : "Desglosalo por cargo."]
         : []),
@@ -409,7 +424,8 @@ export default function Home() {
         </div>
       )}
 
-      {nivel1Activo && subfiltrosActivos.includes("Por distrito") && (
+      {nivel1Activo &&
+        (subfiltrosActivos.includes("Por distrito") || subfiltrosActivos.includes(ELEGIR_DISTRITO)) && (
         <div className="chips chips-sub">
           {DISTRITOS.map((distrito) => (
             <button
