@@ -8,7 +8,7 @@
 --   psql "$DATABASE_URL" -f pg_01_tabla.sql
 -- ============================================================================
 
-DROP VIEW  IF EXISTS v_candidaturas;
+DROP MATERIALIZED VIEW IF EXISTS v_candidaturas;
 DROP TABLE IF EXISTS candidaturas;
 
 CREATE TABLE candidaturas (
@@ -38,5 +38,5 @@ CREATE TABLE candidaturas (
 COMMENT ON TABLE candidaturas IS
   'Capa cruda. Precandidaturas (PASO) y candidaturas (generales y segunda '
   'vuelta) 2011-2025, una fila por persona, cargo, lista e instancia. '
-  'Origen: UEEDA Precandidaturas y Candidaturas 2011 2025 v141025.xlsx, Sheet1. '
+  'Origen: UEEDA Precandidaturas y Candidaturas 2011 2025 v100826.xlsx, Sheet1. '
   'No consultar desde la aplicacion: usar la vista v_candidaturas.';

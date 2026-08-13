@@ -21,7 +21,7 @@ Valor exacto en la base a la izquierda. 24 distritos + Distrito Único.
 | Santiago del Estero | `S DEL ESTERO` |
 | Tierra del Fuego | `T DEL FUEGO` |
 | Córdoba | `CÓRDOBA` |
-| Nación, nacional, todo el país | `DISTRITO ÚNICO` (ver `ambito` abajo — es la categoría de Presidente y Vice / Parlasur, no un distrito geográfico más) |
+| Nación, nacional, todo el país | `DISTRITO ÚNICO` (es la categoría de Presidente y Vice / Parlasur, no un distrito geográfico más) |
 
 El resto de los distritos (Santa Fe, Tucumán, Salta, Mendoza, Chaco,
 Misiones, Entre Ríos, Jujuy, San Juan, Neuquén, Corrientes, Santa Cruz,
@@ -29,19 +29,7 @@ Chubut, La Pampa, La Rioja, San Luis, Catamarca, Río Negro, Formosa) se
 escriben igual en lenguaje natural que en la base — sin alias necesario,
 respetar tildes.
 
-## 2. Ámbito (`ambito`)
-
-| Coloquial | Valor exacto |
-|---|---|
-| por distrito, provincial | `DISTRITAL` |
-| a nivel nacional, presidencial | `NACIONAL` |
-
-`NACIONAL` aplica a Presidente y Vice y a Parlamentarios del Mercosur —
-correlaciona con `distrito = 'DISTRITO ÚNICO'`. 13.475 filas tienen `ambito`
-nulo: son las categorías distritales antes de que se empezara a cargar este
-campo; no filtrar por `ambito` si la pregunta no lo exige, usar `distrito`.
-
-## 3. Cargo (`cargo`)
+## 2. Cargo (`cargo`)
 
 | Coloquial | Valor exacto |
 |---|---|
@@ -53,7 +41,7 @@ campo; no filtrar por `ambito` si la pregunta no lo exige, usar `distrito`.
 Recordar el límite de 3.5 del proyecto: Parlasur solo tiene datos en 2015 y
 2023; Presidente y Vice solo en 2011, 2015, 2019 y 2023.
 
-## 4. Carácter (`caracter`)
+## 3. Subcategoría (`subcategoria`)
 
 | Coloquial | Valor exacto |
 |---|---|
@@ -62,10 +50,10 @@ Recordar el límite de 3.5 del proyecto: Parlasur solo tiene datos en 2015 y
 | vicepresidente | `VICEPRESIDENTE` |
 | presidente (como candidato, no como cargo genérico) | `PRESIDENTE` |
 
-"Encabezar una lista" no es lo mismo que `caracter = 'TITULARES'`: es
-`caracter = 'TITULARES' AND posicion = 1`. Distinguir ambas preguntas.
+"Encabezar una lista" no es lo mismo que `subcategoria = 'TITULARES'`: es
+`subcategoria = 'TITULARES' AND posicion = 1`. Distinguir ambas preguntas.
 
-## 5. Etapa (`etapa`)
+## 4. Etapa (`etapa`)
 
 La vista ya normaliza a texto: `PASO`, `Generales`, `Segunda vuelta`.
 
@@ -80,7 +68,7 @@ pregunta cruza PASO con 2025, la respuesta es que no existe esa instancia,
 no una tabla vacía. Segunda vuelta solo existe en 2015 y 2023 (4 candidaturas
 cada una).
 
-## 6. Género (`genero`)
+## 5. Género (`genero`)
 
 | Coloquial | Valor exacto |
 |---|---|
@@ -89,7 +77,7 @@ cada una).
 
 No hay una tercera categoría en los datos actuales.
 
-## 7. Partidos / siglas — LLA, PRO, UCR, FIT, etc.
+## 6. Partidos / siglas — LLA, PRO, UCR, FIT, etc.
 
 **Advertencia de diseño, no cosmética.** [[no-agrupar-denominaciones-electorales]]
 ya estableció que cada denominación de agrupación es una entidad distinta
@@ -124,7 +112,7 @@ devolver los `agrupacion` distintos que matchearon visibles en la tabla de
 resultado — igual que exige el punto 4.3 del proyecto (SQL visible) — para
 que un match de más quede a la vista y no oculto en un total agregado.
 
-## 8. Fuera de alcance — no traducir, redirigir
+## 7. Fuera de alcance — no traducir, redirigir
 
 Términos que van a aparecer en preguntas pero no tienen columna:
 "votos", "ganó", "electo", "resultado", "escrutinio" → el sistema no tiene

@@ -29,16 +29,22 @@ from datetime import date, datetime, time
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent
-ARCHIVO = RAIZ / "data" / "UEEDA Precandidaturas y Candidaturas 2011 2025 v141025.xlsx"
+ARCHIVO = RAIZ / "data" / "UEEDA Precandidaturas y Candidaturas 2011 2025 v100826.xlsx"
 HOJA = "Sheet1"
 TABLA = "candidaturas"
 SQL_TABLA = RAIZ / "pg_01_tabla.sql"
 SQL_VISTA = RAIZ / "pg_02_vista.sql"
 
+# Orden EXACTO de columnas del Excel de origen (v100826): las celdas se leen
+# por posicion, no por nombre de encabezado, asi que este orden tiene que
+# coincidir con el de la planilla o cada valor se carga en la columna
+# equivocada sin ningun error visible. Respecto de la version anterior
+# (v141025), 'cargo' se corrio antes de 'codigo_ap'/'ap'/'nombre_lista' — el
+# resto de las columnas no cambio de posicion.
 COLUMNAS = [
     "eleccion", "etapa", "id_eleccion", "label_eleccion", "fecha_eleccion",
-    "id_distrito", "distrito", "tipo_eleccion", "codigo_ap", "ap",
-    "nombre_lista", "cargo", "subcategoria_cargo", "posicion", "id_candidato",
+    "id_distrito", "distrito", "tipo_eleccion", "cargo", "codigo_ap", "ap",
+    "nombre_lista", "subcategoria_cargo", "posicion", "id_candidato",
     "genero", "dni", "apellido", "nombres", "candidatura", "fecha_nacimiento",
 ]
 
@@ -142,9 +148,14 @@ def main():
                 log("creando vista")
                 cur.execute(SQL_VISTA.read_text(encoding="utf-8"))
 
-            cur.execute("SELECT count(*) FROM v_candidaturas")
-            filas = cur.fetchone()[0]
-            log(f"  v_candidaturas: {filas:,} filas")
+            cur.execute("""
+                SELECT count(*) AS filas,
+                       count(*) FILTER (WHERE id_candidato IS NOT NULL) AS con_id_candidato
+                FROM v_candidaturas
+            """)
+            filas, con_id = cur.fetchone()
+            log(f"  v_candidaturas: {filas:,} filas, {con_id:,} con id_candidato "
+                f"({con_id / filas * 100:.1f}%)")
         con.commit()
 
     log("listo")

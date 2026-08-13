@@ -14,18 +14,16 @@ Una fila = una candidatura (precandidatura en PASO, candidatura en Generales
 y Segunda vuelta). NO hay otras tablas para consultar.
 
 Columnas:
-- anio            integer   año electoral: 2011, 2013, 2015, 2017, 2019, 2021, 2023, 2025
+- eleccion        integer   año electoral: 2011, 2013, 2015, 2017, 2019, 2021, 2023, 2025
 - etapa           text      'PASO' | 'Generales' | 'Segunda vuelta'
-- instancia       text      etiqueta legible de la instancia electoral
 - fecha_eleccion  date
 - id_distrito     integer
 - distrito        text      24 distritos + 'DISTRITO ÚNICO' (ver diccionario)
-- ambito          text      'DISTRITAL' | 'NACIONAL' | NULL (NULL en filas viejas, no filtrar por esto salvo que la pregunta lo pida)
 - codigo_agrupacion text    se asigna por distrito y por elección — el mismo número en distritos distintos es OTRA agrupación
 - agrupacion      text      denominación de la agrupación política (partido o alianza). Hay ~820 valores distintos, con variantes de texto por distrito/año para el "mismo" espacio político. Ver diccionario antes de filtrar por nombre.
 - lista           text      nombre de lista interna (nula en ~24% de filas: generales sin listas internas)
 - cargo           text      'DIPUTADOS NACIONALES' | 'SENADORES NACIONALES' | 'PARLAMENTARIOS DEL MERCOSUR' | 'PRESIDENTE Y VICE'
-- caracter        text      'TITULARES' | 'SUPLENTES' | 'PRESIDENTE' | 'VICEPRESIDENTE'
+- subcategoria    text      'TITULARES' | 'SUPLENTES' | 'PRESIDENTE' | 'VICEPRESIDENTE'
 - posicion        integer   posición en la lista (1 = encabeza)
 - apellido        text
 - nombres         text
@@ -64,19 +62,19 @@ export const REGLAS_SQL = `
   persona. Para mostrar el resultado igual conviene traer apellido y nombres
   (con MAX() o similar) junto al id_candidato y su conteo.
 - Filtros por nombre de agrupación: usar ILIKE con patrón, nunca igualdad
-  exacta contra un único valor (ver diccionario, sección 7). Devolver la
+  exacta contra un único valor (ver diccionario, sección 6). Devolver la
   columna agrupacion en el SELECT para que las variantes que matchearon
   queden visibles.
 - Modo Listado (la pregunta dice "Dame el listado completo con el detalle
   de cada candidatura, no solo el total"): el SELECT tiene que traer
   exactamente estas columnas, en este orden, ni una más ni una menos salvo
   que la pregunta pida explícitamente menos campos:
-    anio, etapa, distrito, cargo, agrupacion, caracter AS subcategoria,
+    eleccion, etapa, distrito, cargo, agrupacion, subcategoria,
     posicion, apellido, nombres
   Excepción: si el resultado puede incluir etapa PASO (la pregunta filtra
   por PASO, o no filtra etapa y por lo tanto puede traer PASO), agregar
   también la columna lista inmediatamente después de agrupacion:
-    anio, etapa, distrito, cargo, agrupacion, lista, caracter AS subcategoria,
+    eleccion, etapa, distrito, cargo, agrupacion, lista, subcategoria,
     posicion, apellido, nombres
   Esta regla de columnas fijas NO aplica al modo Totales (agregaciones con
   COUNT/GROUP BY): ahí las columnas del SELECT dependen de por qué se pide
@@ -92,8 +90,8 @@ una tabla vacía o inventar una respuesta:
 - Presidente y Vice solo en 2011, 2015, 2019 y 2023.
 - Segunda vuelta solo en 2015 y 2023 (4 candidaturas cada una).
 - Presidente y Vice NO tiene TITULARES/SUPLENTES ni posicion (ver diccionario,
-  sección CARÁCTER): filtrar por caracter = 'TITULARES' AND posicion = 1 en
-  este cargo devuelve siempre 0 filas y NO significa que falten datos.
+  sección SUBCATEGORÍA): filtrar por subcategoria = 'TITULARES' AND posicion = 1
+  en este cargo devuelve siempre 0 filas y NO significa que falten datos.
 `.trim();
 
 export const DICCIONARIO_TERMINOS = `
@@ -112,16 +110,16 @@ CARGO — alias → valor exacto en 'cargo':
   Parlasur / parlamentario del Mercosur → PARLAMENTARIOS DEL MERCOSUR
   presidente / presidencial → PRESIDENTE Y VICE
 
-CARÁCTER — alias → valor exacto en 'caracter':
+SUBCATEGORÍA — alias → valor exacto en 'subcategoria':
   titular → TITULARES
   suplente → SUPLENTES
-  "encabeza la lista" → caracter = 'TITULARES' AND posicion = 1 (NO es lo mismo que solo TITULARES)
+  "encabeza la lista" → subcategoria = 'TITULARES' AND posicion = 1 (NO es lo mismo que solo TITULARES)
   Esta regla de TITULARES/SUPLENTES/posición aplica solo a cargos legislativos
   (DIPUTADOS NACIONALES, SENADORES NACIONALES, PARLAMENTARIOS DEL MERCOSUR).
-  Para cargo = 'PRESIDENTE Y VICE' el campo caracter NO usa TITULARES/SUPLENTES
+  Para cargo = 'PRESIDENTE Y VICE' el campo subcategoria NO usa TITULARES/SUPLENTES
   ni posicion: vale 'PRESIDENTE' o 'VICEPRESIDENTE' directamente.
-  "encabeza la fórmula" / "candidato a presidente" → caracter = 'PRESIDENTE'
-  "candidato a vice" → caracter = 'VICEPRESIDENTE'
+  "encabeza la fórmula" / "candidato a presidente" → subcategoria = 'PRESIDENTE'
+  "candidato a vice" → subcategoria = 'VICEPRESIDENTE'
 
 ETAPA — alias → valor exacto en 'etapa':
   primarias / las PASO → PASO

@@ -20,22 +20,18 @@ CREATE MATERIALIZED VIEW v_candidaturas AS
 
 WITH base AS (
   SELECT
-    -- ---------------------------------------------------------- instancia
-    CASE WHEN eleccion ~ '^\d+$' THEN eleccion::int END        AS anio,
+    CASE WHEN eleccion ~ '^\d+$' THEN eleccion::int END        AS eleccion,
     CASE etapa
       WHEN '1' THEN 'PASO'
       WHEN '2' THEN 'Generales'
       WHEN '3' THEN 'Segunda vuelta'
     END                                                        AS etapa,
-    label_eleccion                                             AS instancia,
     CASE WHEN fecha_eleccion ~ '^\d{2}/\d{2}/\d{4}$'
          THEN to_date(fecha_eleccion, 'DD/MM/YYYY') END        AS fecha_eleccion,
-    id_eleccion                                                AS id_instancia,
 
     -- ------------------------------------------------------------- lugar
     CASE WHEN id_distrito ~ '^\d+$' THEN id_distrito::int END  AS id_distrito,
     distrito,
-    tipo_eleccion                                              AS ambito,
 
     -- -------------------------------------------------------- agrupacion
     -- codigo_ap se asigna por distrito y por eleccion: el mismo numero en
@@ -50,7 +46,7 @@ WITH base AS (
     CASE subcategoria_cargo
       WHEN 'TITULAR' THEN 'TITULARES'
       ELSE subcategoria_cargo
-    END                                                        AS caracter,
+    END                                                        AS subcategoria,
     CASE WHEN posicion ~ '^\d+$' THEN posicion::int END        AS posicion,
 
     -- ----------------------------------------------------------- persona
@@ -65,35 +61,35 @@ WITH base AS (
 )
 
 SELECT
-  anio,
+  eleccion,
   etapa,
-  instancia,
   fecha_eleccion,
   id_distrito,
   distrito,
-  ambito,
   codigo_agrupacion,
   agrupacion,
   lista,
   cargo,
-  caracter,
+  subcategoria,
   posicion,
   apellido,
   nombres,
   genero,
   dni,
-  fecha_nacimiento
+  fecha_nacimiento,
+  id_candidato
 
 FROM base;
 
 -- Indices para los filtros mas frecuentes del portal.
-CREATE INDEX idx_vc_anio        ON v_candidaturas (anio);
-CREATE INDEX idx_vc_distrito    ON v_candidaturas (distrito);
-CREATE INDEX idx_vc_cargo       ON v_candidaturas (cargo);
-CREATE INDEX idx_vc_agrupacion  ON v_candidaturas (agrupacion);
-CREATE INDEX idx_vc_apellido    ON v_candidaturas (apellido);
+CREATE INDEX idx_vc_eleccion      ON v_candidaturas (eleccion);
+CREATE INDEX idx_vc_distrito      ON v_candidaturas (distrito);
+CREATE INDEX idx_vc_cargo         ON v_candidaturas (cargo);
+CREATE INDEX idx_vc_agrupacion    ON v_candidaturas (agrupacion);
+CREATE INDEX idx_vc_apellido      ON v_candidaturas (apellido);
+CREATE INDEX idx_vc_id_candidato  ON v_candidaturas (id_candidato);
 
 COMMENT ON MATERIALIZED VIEW v_candidaturas IS
   'Capa semantica del portal. Una fila por candidatura: persona, cargo, lista '
-  'e instancia electoral, 2011-2025. NO contiene resultados electorales: no '
-  'sabe quien gano, cuantos votos obtuvo nadie, ni quien resulto electo.';
+  'y eleccion, 2011-2025. NO contiene resultados electorales: no sabe quien '
+  'gano, cuantos votos obtuvo nadie, ni quien resulto electo.';

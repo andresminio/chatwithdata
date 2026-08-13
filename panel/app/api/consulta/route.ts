@@ -59,7 +59,7 @@ const esquemaRespuestaModelo = z.object({
         "menor y muestra los 10 con más elecciones.' No menciones nombres de columnas ni " +
         "de tablas ni palabras reservadas de SQL (SELECT, GROUP BY, etc.): describí la " +
         "acción en lenguaje natural (ej. 'agrupa por candidato' en vez de 'agrupa por " +
-        "id_candidato', 'filtra por año 2025' en vez de 'WHERE anio = 2025')."
+        "id_candidato', 'filtra por año 2025' en vez de 'WHERE eleccion = 2025')."
     ),
   mensaje: z
     .string()
