@@ -3,7 +3,7 @@ import { google } from "@ai-sdk/google";
 import { generateObject, generateText } from "ai";
 import { z } from "zod";
 import { construirContextoSistema } from "@/lib/context";
-import { validarSql } from "@/lib/sql-guard";
+import { validarSql, paraContarTotal } from "@/lib/sql-guard";
 import { ejecutarSelect, registrarConsulta } from "@/lib/db";
 
 // Modelo detrás de una variable de entorno (4.2 del proyecto): cambiar de
@@ -151,6 +151,7 @@ export async function POST(req: NextRequest) {
   }
 
   // --- Paso 6: ejecutar contra Postgres ------------------------------------
+  const limite = validacion.limite ?? 200;
   let filas: Record<string, unknown>[];
   try {
     const resultado = await ejecutarSelect(validacion.sql);
@@ -171,6 +172,21 @@ export async function POST(req: NextRequest) {
       { status: 502 }
     );
   }
+
+  // Cuánto hay en total detrás de esta consulta, sin el LIMIT — para poder
+  // decirle al usuario el número real, no solo si "hay más o no". Si esto
+  // falla, no tiene que tirar abajo la respuesta: seguimos sin el dato.
+  let total: number | null = null;
+  try {
+    const conteo = await ejecutarSelect(paraContarTotal(validacion.sql));
+    const valor = conteo.filas[0]?.total;
+    total = typeof valor === "number" ? valor : Number(valor);
+    if (!Number.isFinite(total)) total = null;
+  } catch (error) {
+    console.error("No se pudo calcular el total de resultados:", error);
+  }
+
+  const truncado = total != null ? total > filas.length : filas.length >= limite;
 
   // --- Paso 7: redactar la respuesta a partir de las filas ----------------
   let respuesta: string;
@@ -194,10 +210,18 @@ export async function POST(req: NextRequest) {
         "total general y como máximo destacá las 2 o 3 categorías con mayor valor, y cerrá " +
         "remitiendo a la tabla para el resto, por ejemplo 'El detalle completo por distrito " +
         "está en la tabla debajo'. Evitá otros símbolos de markdown (títulos, tablas, " +
-        "comillas de cita).",
+        "comillas de cita). Si el prompt indica 'Resultados truncados: sí', el total real de " +
+        "registros que cumplen la consulta es mayor a las filas que ves — te paso ese total, " +
+        "mencionalo explícitamente (por ejemplo 'hay X registros en total, se muestran los " +
+        "primeros N') y NO calcules ni afirmes totales, sumas, porcentajes o conteos propios a " +
+        "partir de las filas parciales: usá el total que te paso, no el que resulte de contar " +
+        "las filas mostradas. Si la pregunta pedía un total o una cantidad, aclará que para eso " +
+        "conviene usar el modo \"Totales\" en vez de \"Listado\".",
       prompt: [
         `Pregunta original: ${pregunta}`,
         `SQL ejecutado: ${validacion.sql}`,
+        `Resultados truncados: ${truncado ? "sí" : "no"}`,
+        `Total real de registros que cumplen la consulta: ${total ?? "desconocido"}`,
         `Filas devueltas (máximo ${LIMITE_FILAS_PARA_REDACCION} mostradas de ${filas.length}):`,
         JSON.stringify(filas.slice(0, LIMITE_FILAS_PARA_REDACCION), null, 2),
       ].join("\n\n"),
@@ -218,6 +242,8 @@ export async function POST(req: NextRequest) {
     sqlGenerado: validacion.sql,
     resultado: redaccionFallo ? "error_redaccion" : "ok",
     filasDevueltas: filas.length,
+    totalRegistros: total,
+    truncado,
   });
 
   return NextResponse.json({
@@ -225,5 +251,8 @@ export async function POST(req: NextRequest) {
     sql: validacion.sql,
     filas,
     logId,
+    total,
+    truncado,
+    limite,
   });
 }

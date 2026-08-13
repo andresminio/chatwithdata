@@ -20,6 +20,7 @@ export interface ResultadoValidacion {
   valido: boolean;
   motivo?: string;
   sql?: string;
+  limite?: number;
 }
 
 export function validarSql(sqlCrudo: string): ResultadoValidacion {
@@ -74,5 +75,18 @@ export function validarSql(sqlCrudo: string): ResultadoValidacion {
     sql = `${sql} LIMIT 200`;
   }
 
-  return { valido: true, sql };
+  const matchLimite = sql.match(/\blimit\s+(\d+)/i);
+  const limite = matchLimite ? parseInt(matchLimite[1], 10) : 200;
+
+  return { valido: true, sql, limite };
+}
+
+/**
+ * Envuelve el mismo SQL ya validado en un COUNT(*), sacándole el LIMIT, para
+ * saber cuántos registros hay en total detrás de la consulta — no solo si
+ * "hay más o no". Así la respuesta puede decir el número real, no un booleano.
+ */
+export function paraContarTotal(sql: string): string {
+  const sinLimite = sql.replace(/\s*\blimit\s+\d+\s*$/i, "");
+  return `SELECT COUNT(*)::int AS total FROM (${sinLimite}) AS _conteo`;
 }

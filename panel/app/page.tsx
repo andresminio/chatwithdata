@@ -10,6 +10,9 @@ interface RespuestaConsulta {
   detalle?: string;
   reintentable?: boolean;
   logId?: number | null;
+  truncado?: boolean;
+  limite?: number;
+  total?: number | null;
 }
 
 // Render liviano del markdown que devuelve el modelo: **negrita** resaltada
@@ -295,6 +298,20 @@ export default function Home() {
               ))}
             </tbody>
           </table>
+          {resultado.truncado && (
+            <div className="table-truncado">
+              {resultado.total != null ? (
+                <>
+                  Se encontraron <strong>{resultado.total}</strong> registros en total. Mostrando
+                  los primeros {resultado.limite ?? resultado.filas.length}.
+                </>
+              ) : (
+                <>Mostrando los primeros {resultado.limite ?? resultado.filas.length} de más resultados.</>
+              )}{" "}
+              Para el total exacto usá el filtro <strong>Totales</strong>, o agregá más filtros
+              para acotar la búsqueda.
+            </div>
+          )}
         </div>
       )}
 
@@ -675,6 +692,17 @@ export default function Home() {
         }
         tbody tr:hover {
           background: #fbfbfe;
+        }
+        .table-truncado {
+          padding: 10px 18px;
+          border-top: 1px solid var(--border);
+          background: #fafaff;
+          color: var(--ink-soft);
+          font-size: 12px;
+          line-height: 1.5;
+        }
+        .table-truncado strong {
+          color: var(--ink);
         }
       `}</style>
     </main>

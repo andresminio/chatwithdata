@@ -62,6 +62,8 @@ export interface RegistroConsulta {
   resultado: ResultadoLog;
   filasDevueltas?: number | null;
   error?: string | null;
+  totalRegistros?: number | null;
+  truncado?: boolean;
 }
 
 // Fire-and-forget pensado: si falla el registro (por ejemplo la tabla no
@@ -72,8 +74,9 @@ export interface RegistroConsulta {
 export async function registrarConsulta(registro: RegistroConsulta): Promise<number | null> {
   try {
     const resultado = await obtenerPool().query<{ id: number }>(
-      `INSERT INTO consultas_log (pregunta, sql, alcance, filas_devueltas, error)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO consultas_log
+         (pregunta, sql, alcance, filas_devueltas, error, total_registros, truncado)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id`,
       [
         registro.pregunta,
@@ -81,6 +84,8 @@ export async function registrarConsulta(registro: RegistroConsulta): Promise<num
         registro.resultado,
         registro.filasDevueltas ?? null,
         registro.error ?? null,
+        registro.totalRegistros ?? null,
+        registro.truncado ?? false,
       ]
     );
     return resultado.rows[0]?.id ?? null;
