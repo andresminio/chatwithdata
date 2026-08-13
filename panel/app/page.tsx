@@ -1034,15 +1034,16 @@ export default function Home() {
           background: #fafaff;
         }
         .sql-body {
-          border-top: 1px solid var(--border);
-          background: #12141f;
-          padding: 16px 18px;
+          background: #f4f5fb;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          padding: 14px 16px;
           font-family: "SFMono-Regular", Menlo, Consolas, monospace;
           font-size: 13px;
           line-height: 1.6;
-          color: #cbd2f0;
+          color: #3d3f6b;
           overflow-x: auto;
-          margin: 0;
+          margin: 4px 18px 16px;
           white-space: pre-wrap;
         }
 
