@@ -66,12 +66,15 @@ export interface RegistroConsulta {
 
 // Fire-and-forget pensado: si falla el registro (por ejemplo la tabla no
 // existe todavía en algún ambiente), no tiene que tirar abajo la respuesta
-// al usuario. Se loguea a consola y se sigue.
-export async function registrarConsulta(registro: RegistroConsulta): Promise<void> {
+// al usuario. Se loguea a consola y se sigue. Devuelve el id de la fila
+// insertada (o null si falló) para que el front pueda, más tarde, marcar
+// esa consulta puntual como reportada por el usuario.
+export async function registrarConsulta(registro: RegistroConsulta): Promise<number | null> {
   try {
-    await obtenerPool().query(
-      `INSERT INTO consultas_log (pregunta, sql_generado, resultado, filas_devueltas, error)
-       VALUES ($1, $2, $3, $4, $5)`,
+    const resultado = await obtenerPool().query<{ id: number }>(
+      `INSERT INTO consultas_log (pregunta, sql, alcance, filas_devueltas, error)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id`,
       [
         registro.pregunta,
         registro.sqlGenerado ?? null,
@@ -80,7 +83,28 @@ export async function registrarConsulta(registro: RegistroConsulta): Promise<voi
         registro.error ?? null,
       ]
     );
+    return resultado.rows[0]?.id ?? null;
   } catch (error) {
     console.error("No se pudo registrar la consulta en consultas_log:", error);
+    return null;
+  }
+}
+
+// Marca una consulta puntual como reportada por un usuario ("encontré un
+// problema"). No identifica quién reportó, solo que alguien lo hizo. Devuelve
+// false si el id no existe o si falla, para que el endpoint pueda responder
+// acorde sin tirar un 500 innecesario.
+export async function marcarConsultaReportada(id: number): Promise<boolean> {
+  try {
+    const resultado = await obtenerPool().query(
+      `UPDATE consultas_log
+       SET reportado_usuario = true
+       WHERE id = $1 AND reportado_usuario = false`,
+      [id]
+    );
+    return (resultado.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error("No se pudo marcar la consulta como reportada:", error);
+    return false;
   }
 }

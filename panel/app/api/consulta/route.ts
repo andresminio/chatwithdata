@@ -108,13 +108,14 @@ export async function POST(req: NextRequest) {
   }
 
   if (decision.tipo === "fuera_de_alcance") {
-    await registrarConsulta({ pregunta, resultado: "fuera_de_alcance" });
+    const logId = await registrarConsulta({ pregunta, resultado: "fuera_de_alcance" });
     return NextResponse.json({
       respuesta:
         decision.mensaje ??
         "Esta consulta no puede responderse con la información disponible. Los datos corresponden a candidaturas y precandidaturas electorales.",
       sql: null,
       filas: [],
+      logId,
     });
   }
 
@@ -212,7 +213,7 @@ export async function POST(req: NextRequest) {
       : "Podés ver la información que buscabas a continuación.";
   }
 
-  await registrarConsulta({
+  const logId = await registrarConsulta({
     pregunta,
     sqlGenerado: validacion.sql,
     resultado: redaccionFallo ? "error_redaccion" : "ok",
@@ -223,5 +224,6 @@ export async function POST(req: NextRequest) {
     respuesta,
     sql: validacion.sql,
     filas,
+    logId,
   });
 }

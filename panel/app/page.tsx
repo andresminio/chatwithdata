@@ -9,6 +9,7 @@ interface RespuestaConsulta {
   error?: string;
   detalle?: string;
   reintentable?: boolean;
+  logId?: number | null;
 }
 
 // Render liviano del markdown que devuelve el modelo: **negrita** resaltada
@@ -95,6 +96,23 @@ export default function Home() {
   const [subfiltrosActivos, setSubfiltrosActivos] = useState<string[]>([]);
   const [cargando, setCargando] = useState(false);
   const [resultado, setResultado] = useState<RespuestaConsulta | null>(null);
+  const [reportado, setReportado] = useState(false);
+
+  async function reportarProblema() {
+    if (reportado || !resultado?.logId) return;
+    setReportado(true); // optimista: la experiencia no debe depender de la latencia de red
+    try {
+      await fetch("/api/reportar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logId: resultado.logId }),
+      });
+    } catch {
+      // si falla el request no revertimos el texto: para quien reportó ya
+      // "se envió"; el caso raro de fallo de red se pierde antes que
+      // confundir con un botón que vuelve atrás solo.
+    }
+  }
 
   function toggleNivel1(label: string) {
     setNivel1Activo((actual) => (actual === label ? null : label));
@@ -119,6 +137,7 @@ export default function Home() {
     const texto = instrucciones.length ? `${base} (${instrucciones.join(" ")})` : base;
     setCargando(true);
     setResultado(null);
+    setReportado(false);
     try {
       const res = await fetch("/api/consulta", {
         method: "POST",
@@ -178,7 +197,7 @@ export default function Home() {
       </div>
 
       <div className="chips">
-        {NIVEL1.map((f) => (
+        {NIVEL1.filter((f) => !nivel1Activo || f.label === nivel1Activo).map((f) => (
           <button
             key={f.label}
             className={`chip${nivel1Activo === f.label ? " chip-activo" : ""}`}
@@ -222,6 +241,23 @@ export default function Home() {
           <div className="answer-disclaimer">
             Contenido generado con inteligencia artificial. Verificá la información antes de utilizarla.
           </div>
+          {resultado.logId != null && (
+            <div className="answer-reporte">
+              <span key={reportado ? "gracias" : "reportar"} className="fade-in">
+                {reportado ? (
+                  "¡Gracias por tu aporte!"
+                ) : (
+                  <>
+                    ¿Algo no resultó como esperabas? Reportalo presionando{" "}
+                    <button type="button" className="reporte-link" onClick={reportarProblema}>
+                      acá
+                    </button>
+                    .
+                  </>
+                )}
+              </span>
+            </div>
+          )}
         </div>
       )}
 
@@ -513,6 +549,38 @@ export default function Home() {
           border-top: 1px solid var(--border);
           font-size: 12px;
           color: var(--ink-soft);
+        }
+        .answer-reporte {
+          margin-top: 6px;
+          font-size: 12px;
+          color: var(--ink-soft);
+        }
+        .reporte-link {
+          border: none;
+          background: none;
+          padding: 0;
+          font: inherit;
+          color: var(--accent);
+          font-weight: 600;
+          text-decoration: underline;
+          cursor: pointer;
+        }
+        .reporte-link:hover {
+          color: var(--accent-2);
+        }
+        .fade-in {
+          display: inline-block;
+          animation: fadeIn 0.35s ease;
+        }
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(2px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         .sql-card {
