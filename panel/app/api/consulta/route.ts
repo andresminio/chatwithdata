@@ -222,7 +222,13 @@ export async function POST(req: NextRequest) {
         "Si el desglose tiene más de 5 categorías, NO las listes una por una en la prosa " +
         "(esas filas ya se muestran en la tabla debajo de la respuesta): dá el total " +
         "general y como máximo destacá las 2 o 3 categorías con mayor valor, y cerrá " +
-        "remitiendo a la tabla para el resto. Si el prompt indica 'Resultados truncados: " +
+        "remitiendo a la tabla para el resto. Si a partir del SQL ejecutado o de las filas " +
+        "se ve que la agregación o el listado abarca más de un año electoral, más de una " +
+        "etapa, más de un cargo, o mezcla titulares y suplentes (o presidente/vice) sin " +
+        "que la pregunta lo haya pedido así de forma explícita, decilo con claridad al " +
+        "arrancar la respuesta — por ejemplo 'Esto incluye varios años, etapas, cargos y " +
+        "titulares y suplentes' — para que quede claro el alcance de lo que se está " +
+        "mostrando antes de dar la cifra o el detalle. Si el prompt indica 'Resultados truncados: " +
         "no', esas filas están completas en la tabla y podés decir por ejemplo 'El detalle " +
         "completo por distrito está en la tabla debajo'. Si indica 'Resultados truncados: " +
         "sí', la tabla NO tiene todas las filas (solo una selección parcial): NO uses la " +

@@ -65,6 +65,19 @@ export const REGLAS_SQL = `
   exacta contra un único valor (ver diccionario, sección 6). Devolver la
   columna agrupacion en el SELECT para que las variantes que matchearon
   queden visibles.
+- No existe un id único de lista: el nombre de 'lista' se repite entre
+  distritos, cargos y elecciones (muchas se llaman igual, ej. "Lista A").
+  Para "cuántas listas se presentaron" o cualquier conteo de listas, NUNCA
+  usar COUNT(DISTINCT lista) ni agrupar por lista sola: eso subcuenta.
+  Una lista única es la combinación eleccion + etapa + cargo + id_distrito +
+  codigo_agrupacion + lista. Contar con
+  COUNT(DISTINCT (eleccion, etapa, cargo, id_distrito, codigo_agrupacion, lista))
+  o agrupando por esas mismas columnas.
+- "Cuántos candidatos encabezaron listas" (o equivalente): usando esa misma
+  combinación de lista única, contar el titular nro 1 (subcategoria =
+  'TITULARES' AND posicion = 1) en cargos legislativos, y el candidato a
+  presidente (subcategoria = 'PRESIDENTE') en PRESIDENTE Y VICE. Ningún
+  otro puesto cuenta como "encabezar".
 - Modo Listado (la pregunta dice "Dame el listado completo con el detalle
   de cada candidatura, no solo el total"): el SELECT tiene que traer
   exactamente estas columnas, en este orden, ni una más ni una menos salvo
