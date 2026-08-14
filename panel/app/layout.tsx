@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Candidaturas electorales — consulta",
-  description: "Piloto interno: consulta en lenguaje natural sobre candidaturas 2011–2025.",
+  title: "Chateá con los datos electorales",
+  description: "Información sobre candidaturas nacionales en lenguaje natural.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
