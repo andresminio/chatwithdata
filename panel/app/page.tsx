@@ -1,6 +1,38 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+
+// Tipado mínimo de la Web Speech API: TypeScript no la incluye en sus libs
+// estándar (no es parte de ningún spec W3C estable), y no vale la pena sumar
+// una dependencia solo por esto. Cubre únicamente lo que usa este archivo.
+interface SpeechRecognitionResultado {
+  transcript: string;
+}
+interface SpeechRecognitionEvento {
+  resultIndex: number;
+  results: {
+    length: number;
+    item(index: number): { isFinal: boolean; 0: SpeechRecognitionResultado };
+    [index: number]: { isFinal: boolean; 0: SpeechRecognitionResultado };
+  };
+}
+interface SpeechRecognitionInstancia {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((evento: SpeechRecognitionEvento) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+}
+type SpeechRecognitionConstructor = new () => SpeechRecognitionInstancia;
+declare global {
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
+}
 
 interface RespuestaConsulta {
   respuesta: string;
@@ -169,6 +201,10 @@ const FILAS_POR_PAGINA = 25;
 
 export default function Home() {
   const [pregunta, setPregunta] = useState("");
+  const [dictadoSoportado, setDictadoSoportado] = useState(false);
+  const [escuchando, setEscuchando] = useState(false);
+  const reconocimientoRef = useRef<SpeechRecognitionInstancia | null>(null);
+  const preguntaAntesDeDictarRef = useRef("");
   const [nivel1Activo, setNivel1Activo] = useState<string | null>(null);
   const [subfiltrosActivos, setSubfiltrosActivos] = useState<string[]>([]);
   const [anioActivo, setAnioActivo] = useState<string | null>(null);
@@ -180,6 +216,65 @@ export default function Home() {
   const [resultado, setResultado] = useState<RespuestaConsulta | null>(null);
   const [reportado, setReportado] = useState(false);
   const [paginaActual, setPaginaActual] = useState(1);
+
+  // Dictado por voz: Web Speech API nativa del navegador, sin backend ni
+  // dependencia nueva. Solo Chrome/Edge (y derivados) la traen habilitada
+  // hoy — Safari es parcial y Firefox no la soporta — así que el botón de
+  // micrófono se muestra únicamente si el navegador la expone.
+  useEffect(() => {
+    const Constructor =
+      typeof window !== "undefined"
+        ? window.SpeechRecognition ?? window.webkitSpeechRecognition
+        : undefined;
+    if (!Constructor) return;
+
+    const reconocimiento = new Constructor();
+    reconocimiento.lang = "es-AR";
+    reconocimiento.continuous = true;
+    reconocimiento.interimResults = true;
+    reconocimientoRef.current = reconocimiento;
+    setDictadoSoportado(true);
+
+    return () => {
+      reconocimiento.stop();
+    };
+  }, []);
+
+  function alternarDictado() {
+    const reconocimiento = reconocimientoRef.current;
+    if (!reconocimiento) return;
+
+    if (escuchando) {
+      reconocimiento.stop();
+      setEscuchando(false);
+      return;
+    }
+
+    preguntaAntesDeDictarRef.current = pregunta;
+    reconocimiento.onresult = (evento) => {
+      let textoFinal = "";
+      let textoParcial = "";
+      for (let i = evento.resultIndex; i < evento.results.length; i++) {
+        const resultado = evento.results.item(i);
+        if (resultado.isFinal) {
+          textoFinal += resultado[0].transcript;
+        } else {
+          textoParcial += resultado[0].transcript;
+        }
+      }
+      const base = preguntaAntesDeDictarRef.current;
+      const separador = base && !base.endsWith(" ") ? " " : "";
+      if (textoFinal) {
+        preguntaAntesDeDictarRef.current = `${base}${separador}${textoFinal}`.trim();
+      }
+      setPregunta(`${preguntaAntesDeDictarRef.current}${textoParcial ? " " + textoParcial : ""}`);
+    };
+    reconocimiento.onerror = () => setEscuchando(false);
+    reconocimiento.onend = () => setEscuchando(false);
+
+    setEscuchando(true);
+    reconocimiento.start();
+  }
 
   async function reportarProblema() {
     if (reportado || !resultado?.logId) return;
@@ -374,6 +469,21 @@ export default function Home() {
           onKeyDown={(e) => e.key === "Enter" && consultar()}
           placeholder="¿Cuántas mujeres encabezaron listas en 2025?"
         />
+        {dictadoSoportado && (
+          <button
+            type="button"
+            className={`mic-btn${escuchando ? " mic-btn-activo" : ""}`}
+            onClick={alternarDictado}
+            disabled={cargando}
+            title={escuchando ? "Detener dictado" : "Preguntar por voz"}
+            aria-label={escuchando ? "Detener dictado" : "Preguntar por voz"}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 11a7 7 0 0 1-14 0M12 18v4M9 22h6" />
+            </svg>
+          </button>
+        )}
         <button onClick={consultar} disabled={cargando}>
           {cargando ? (
             "Consultando..."
@@ -800,6 +910,30 @@ export default function Home() {
         .search-card button svg {
           width: 15px;
           height: 15px;
+        }
+
+        .search-card .mic-btn {
+          background: var(--accent-soft);
+          color: var(--accent);
+          box-shadow: none;
+          padding: 0 14px;
+        }
+        .search-card .mic-btn svg {
+          width: 17px;
+          height: 17px;
+        }
+        .search-card .mic-btn-activo {
+          background: #fdeaea;
+          color: #d64545;
+          animation: mic-pulso 1.4s ease-in-out infinite;
+        }
+        @keyframes mic-pulso {
+          0%, 100% {
+            box-shadow: 0 0 0 0 rgba(214, 69, 69, 0.35);
+          }
+          50% {
+            box-shadow: 0 0 0 6px rgba(214, 69, 69, 0);
+          }
         }
 
         .chips {
