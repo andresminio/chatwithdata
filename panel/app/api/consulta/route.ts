@@ -65,7 +65,17 @@ const esquemaRespuestaModelo = z.object({
     .string()
     .optional()
     .describe(
-      "Si tipo = 'fuera_de_alcance': explicación breve de por qué, en español neutro, sin opinar."
+      "Si tipo = 'fuera_de_alcance': explicación breve de por qué, en español neutro, sin " +
+        "opinar, pero con un tono amable y cercano — nunca cortante ni tipo error de sistema " +
+        "(evitar frases como 'la pregunta es demasiado ambigua, reformule'). Si el motivo es " +
+        "que la pregunta es ambigua o le falta un dato para poder traducirla a SQL (por " +
+        "ejemplo, no especifica año, distrito, cargo, o no queda claro si pide personas o " +
+        "candidaturas), decí puntualmente QUÉ falta o qué es ambiguo, y cerrá SIEMPRE con un " +
+        "ejemplo concreto de cómo reformularla ya resuelta, por ejemplo: 'No me queda claro a " +
+        "qué año electoral te referís. ¿Podrías precisarlo? Por ejemplo: \"¿Cuántas mujeres " +
+        "encabezaron listas en 2025?\"'. Si en cambio el motivo es que el dato pedido no " +
+        "existe en la base (resultados electorales, votos, financiamiento, etc.), explicá " +
+        "brevemente qué información sí está disponible en su lugar."
     ),
 });
 
