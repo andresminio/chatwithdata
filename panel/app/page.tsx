@@ -659,7 +659,7 @@ export default function Home() {
           <div className="label">Respuesta</div>
           <div className="answer-text">{formatearRespuesta(resultado.respuesta)}</div>
           <div className="answer-disclaimer">
-            Contenido generado con inteligencia artificial. Verificá la información antes de utilizarla.
+            Contenido generado con inteligencia artificial. Verificá la información importante antes de utilizarla.
           </div>
           {resultado.logId != null && (
             <div className="answer-reporte">
