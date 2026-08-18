@@ -68,6 +68,22 @@ export const REGLAS_SQL = `
   elecciones — solo id_candidato identifica de forma confiable a la misma
   persona. Para mostrar el resultado igual conviene traer apellido y nombres
   (con MAX() o similar) junto al id_candidato y su conteo.
+  Dos reglas más para este tipo de pregunta, siempre juntas:
+    1. Excluir siempre las filas con id_candidato NULL (WHERE id_candidato
+       IS NOT NULL): si no se excluyen, todas esas filas caen en un mismo
+       grupo NULL y ese grupo suele tener el conteo más alto de todos,
+       apareciendo falsamente como "el candidato" con más postulaciones.
+    2. Una "postulación" es por persona y por año electoral, NO por fila:
+       una misma persona que aparece en PASO y en Generales (y/o Segunda
+       vuelta) del mismo año es UNA sola postulación ese año, no dos o
+       tres. Contar postulaciones como
+         COUNT(DISTINCT (id_candidato, eleccion))
+       (agrupando por esas dos columnas, o el equivalente), nunca
+       COUNT(*) ni COUNT(id_candidato) a secas agrupando solo por
+       id_candidato, porque eso duplicaría a cada persona por cada etapa
+       en la que compitió. No hace falta agregar cargo a esta clave: una
+       misma persona no puede postularse a dos cargos nacionales distintos
+       en la misma elección.
 - Filtros por nombre de agrupación: usar ILIKE con patrón, nunca igualdad
   exacta contra un único valor (ver diccionario, sección 6). Devolver la
   columna agrupacion en el SELECT para que las variantes que matchearon
