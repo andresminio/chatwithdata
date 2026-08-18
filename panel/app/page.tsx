@@ -848,7 +848,7 @@ export default function Home() {
         </div>
       </div>
 
-      {nivel1Activo && subfiltrosActivos.includes(ELEGIR_ANIO) && (
+      {!cargando && !simularPensandoTour && nivel1Activo && subfiltrosActivos.includes(ELEGIR_ANIO) && (
         <div className="chips-sub-wrap">
           <span className="chips-sub-label">Elegí un año</span>
           <div className="chips chips-sub">
@@ -876,7 +876,7 @@ export default function Home() {
         </div>
       )}
 
-      {nivel1Activo &&
+      {!cargando && !simularPensandoTour && nivel1Activo &&
         (subfiltrosActivos.includes("Por distrito") || subfiltrosActivos.includes(ELEGIR_DISTRITO)) && (
         <div className="chips-sub-wrap">
           <span className="chips-sub-label">Elegí un distrito</span>
@@ -895,7 +895,7 @@ export default function Home() {
         </div>
       )}
 
-      {nivel1Activo && subfiltrosActivos.includes("Por género") && (
+      {!cargando && !simularPensandoTour && nivel1Activo && subfiltrosActivos.includes("Por género") && (
         <div className="chips-sub-wrap">
           <span className="chips-sub-label">Elegí un género</span>
           <div className="chips chips-sub">
@@ -913,7 +913,7 @@ export default function Home() {
         </div>
       )}
 
-      {nivel1Activo && subfiltrosActivos.includes("Por cargo") && (
+      {!cargando && !simularPensandoTour && nivel1Activo && subfiltrosActivos.includes("Por cargo") && (
         <div className="chips-sub-wrap">
           <span className="chips-sub-label">Elegí un cargo</span>
           <div className="chips chips-sub">
@@ -931,7 +931,7 @@ export default function Home() {
         </div>
       )}
 
-      {nivel1Activo && subfiltrosActivos.includes("Por etapa") && (
+      {!cargando && !simularPensandoTour && nivel1Activo && subfiltrosActivos.includes("Por etapa") && (
         <div className="chips-sub-wrap">
           <span className="chips-sub-label">Elegí la etapa</span>
           <div className="chips chips-sub">
