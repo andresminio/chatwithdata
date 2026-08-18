@@ -227,13 +227,32 @@ export const REGLAS_SQL = `
   SELECT independientes unidos con UNION ALL, cada uno simple, es más
   confiable que una expresión combinada — un CASE mezclado con COUNT(...)
   FILTER en la misma columna es fácil de reproducir mal entre una consulta
-  y otra. Ejemplo (reemplazar el año del WHERE por el que pida la
-  pregunta; se puede omitir el segundo SELECT si la pregunta ya filtró a
-  un año sin elección presidencial, ver CASOS_LIMITE):
+  y otra. SENADORES NACIONALES es OTRO caso especial, separarlo también:
+  por el sistema de lista incompleta se renuevan 3 bancas por distrito (2
+  para la lista más votada, 1 para la segunda), pero cada lista nomina
+  como máximo 2 candidatos titulares — ninguna lista nomina un tercer
+  candidato porque ninguna puede ganar más de 2 bancas. Por eso
+  COUNT(DISTINCT posicion) para Senadores SIEMPRE da 2 aunque en realidad
+  se eligen 3: hay que sumarle 1 a mano (+ 1) SOLO para este cargo, nunca
+  para Diputados ni Parlasur. Este total NUNCA puede superar 3 (son las
+  únicas bancas de Senado que se renuevan por distrito en una elección):
+  envolver el +1 en LEAST(..., 3) como resguardo, por si algún distrito
+  tuviera datos atípicos que hicieran superar ese tope. Ejemplo completo
+  (reemplazar el año del WHERE por el que pida la pregunta; se puede
+  omitir el tercer SELECT si la pregunta ya filtró a un año sin elección
+  presidencial, ver CASOS_LIMITE):
     SELECT cargo, distrito,
       COUNT(DISTINCT posicion) FILTER (WHERE subcategoria = 'TITULARES') AS cantidad
     FROM v_candidaturas
-    WHERE eleccion = 2025 AND cargo != 'PRESIDENTE Y VICE'
+    WHERE eleccion = 2025 AND cargo IN ('DIPUTADOS NACIONALES', 'PARLAMENTARIOS DEL MERCOSUR')
+    GROUP BY cargo, distrito
+
+    UNION ALL
+
+    SELECT cargo, distrito,
+      LEAST(COUNT(DISTINCT posicion) FILTER (WHERE subcategoria = 'TITULARES') + 1, 3) AS cantidad
+    FROM v_candidaturas
+    WHERE eleccion = 2025 AND cargo = 'SENADORES NACIONALES'
     GROUP BY cargo, distrito
 
     UNION ALL
