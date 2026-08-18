@@ -142,11 +142,13 @@ const EJEMPLOS = [
   },
   {
     etiqueta: "Edades por cargo",
-    pregunta: "¿Cuál es la edad promedio de los candidatos al momento de la elección, agrupada por cargo?",
+    pregunta: "¿Cuál es la edad promedio de los candidatos por cargo?",
   },
   {
     etiqueta: "Cargos que se eligieron",
-    pregunta: "¿Qué cargos se eligieron en cada distrito en 2025?",
+    pregunta:
+      "¿Cuántos cargos se eligieron en cada distrito en 2025? Mostrar una tabla con " +
+      "columnas: distrito, Diputados Titulares, Senadores Titulares.",
   },
 ];
 

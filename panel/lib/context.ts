@@ -192,6 +192,38 @@ export const REGLAS_SQL = `
   sin distrito. Si el desglose incluye cargo (u otra dimensión) en el
   GROUP BY, el conteo de agrupaciones distintas queda naturalmente acotado
   a cada grupo — no hace falta agregar cargo dentro del COUNT(DISTINCT (...)).
+- Cantidad de "cargos que se eligieron" / bancas a renovar (ej. "cuántos
+  cargos se eligieron en cada distrito"): esto NO es lo mismo que contar
+  candidatos ni candidaturas. No hay columna de resultados/bancas en la
+  vista (ver ESQUEMA_VISTA), pero se puede inferir de la profundidad de las
+  listas: dentro de un mismo distrito+cargo(+elección), todas las listas
+  compiten por el mismo número de bancas, aunque alguna nomine una lista
+  titular incompleta — alcanza con que UNA sola llegue hasta el final para
+  que la posición más alta usada sea la cantidad real de cargos a elegir.
+  Calcular como
+    COUNT(DISTINCT posicion) FILTER (WHERE subcategoria = 'TITULARES')
+  agrupando por distrito, cargo (y eleccion si la pregunta lo pide). Esta
+  regla aplica SOLO a cargos legislativos con columna posicion (DIPUTADOS
+  NACIONALES, SENADORES NACIONALES, PARLAMENTARIOS DEL MERCOSUR) — NUNCA a
+  PRESIDENTE Y VICE, que no tiene posicion ni TITULARES/SUPLENTES (ver
+  diccionario, sección SUBCATEGORÍA): ahí "cargos que se eligen" es siempre
+  1 fórmula por distrito único, no hace falta calcularlo.
+  Si la pregunta pide esto pivoteado en columnas por cargo (ej. columnas
+  "Diputados Titulares", "Senadores Titulares"), combinar con la regla de
+  columnas separadas por categoría, usando COUNT(DISTINCT ...) FILTER
+  dentro de cada rama en vez de SUM(CASE ...). Ejemplo para distrito x
+  Diputados/Senadores en 2025:
+    SELECT distrito,
+      COUNT(DISTINCT posicion) FILTER (
+        WHERE cargo = 'DIPUTADOS NACIONALES' AND subcategoria = 'TITULARES'
+      ) AS diputados_titulares,
+      COUNT(DISTINCT posicion) FILTER (
+        WHERE cargo = 'SENADORES NACIONALES' AND subcategoria = 'TITULARES'
+      ) AS senadores_titulares
+    FROM v_candidaturas
+    WHERE eleccion = 2025
+    GROUP BY distrito
+    ORDER BY distrito
 `.trim();
 
 export const CASOS_LIMITE = `
