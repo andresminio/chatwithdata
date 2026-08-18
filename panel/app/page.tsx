@@ -127,12 +127,12 @@ const EJEMPLOS = [
   {
     etiqueta: "Competencia en las PASO",
     pregunta:
-      "¿Cuántas agrupaciones y listas se presentaron en las PASO entre 2011 y 2025, " +
-      "desagregado por cargo?",
+      "¿Cuántas agrupaciones y listas se presentaron en las PASO, desagregado por cargo " +
+      "y elección?",
   },
   {
     etiqueta: "Candidatos con más postulaciones",
-    pregunta: "¿Qué candidatos se postularon más veces?",
+    pregunta: "¿Qué candidatos registraron la mayor cantidad de postulaciones?",
   },
   {
     etiqueta: "Encabezamientos de listas",
