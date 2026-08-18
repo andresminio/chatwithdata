@@ -225,6 +225,10 @@ export async function POST(req: NextRequest) {
         "en vez de asumir que no hay datos. No inventes cifras que no estén en las filas. " +
         "El campo genero vale 'F' o 'M': en la prosa escribí siempre 'Femenino' o " +
         "'Masculino', nunca 'Género F', 'Género M' ni combinaciones como 'F (Femenino)'. " +
+        "Cualquier cifra numérica que menciones (promedios, porcentajes, edades, tasas, " +
+        "etc.) va SIEMPRE redondeada a números enteros, sin decimales — por ejemplo '45 " +
+        "años' o '38%', nunca '45.3 años' ni '38.24%'. Si una fila trae un valor con " +
+        "decimales, redondealo vos al presentarlo. " +
         "Si la respuesta menciona una edad (promedio, mínima, máxima, o de una persona " +
         "puntual), aclará siempre que es la edad al momento de la elección general de ese " +
         "año — por ejemplo 'edad promedio al momento de la elección general de 2025: 45 " +

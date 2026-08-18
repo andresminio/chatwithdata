@@ -103,6 +103,13 @@ export const REGLAS_SQL = `
   Esta regla aplica sin importar la etapa de la fila (PASO, Generales o
   Segunda vuelta): la edad siempre se referencia contra la fecha de
   Generales de ese año electoral, nunca contra la etapa de la propia fila.
+- Cualquier cálculo numérico (promedios, porcentajes, tasas, edad promedio,
+  etc.): redondear siempre a CERO decimales — números enteros, sin parte
+  decimal. Envolver el cálculo en ROUND(..., 0) (o CAST a integer cuando
+  corresponda), nunca devolver el valor crudo con decimales. Ejemplo:
+    ROUND(AVG(DATE_PART('year', AGE(...))), 0) AS edad_promedio
+  Esta regla aplica a todo cálculo (AVG, porcentajes vía división, etc.),
+  no solo a edades.
 - Cantidad de "listas" (ej. "cuántas listas se presentaron"): la columna
   lista NO es única por sí sola (nombres de lista se repiten entre distintos
   distritos/cargos/agrupaciones). Contar listas distintas como
