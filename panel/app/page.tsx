@@ -958,10 +958,28 @@ export default function Home() {
           <div>
             <strong>Error:</strong> {resultado.error}
           </div>
+          {resultado.detalle && <div className="error-detalle">{resultado.detalle}</div>}
           {resultado.reintentable && (
             <button className="retry-btn" onClick={consultar} disabled={cargando}>
               Reintentar
             </button>
+          )}
+          {resultado.logId != null && (
+            <div className="answer-reporte">
+              <span key={reportado ? "gracias" : "reportar"} className="fade-in">
+                {reportado ? (
+                  "¡Gracias por tu aporte!"
+                ) : (
+                  <>
+                    ¿Algo no resultó como esperabas? Reportalo presionando{" "}
+                    <button type="button" className="reporte-link" id="p-reportar" onClick={reportarProblema}>
+                      acá
+                    </button>
+                    .
+                  </>
+                )}
+              </span>
+            </div>
           )}
         </div>
       )}

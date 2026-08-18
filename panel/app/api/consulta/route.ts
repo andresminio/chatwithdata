@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     });
     decision = resultado.object;
   } catch (error) {
-    await registrarConsulta({
+    const logId = await registrarConsulta({
       pregunta,
       resultado: "error_generacion",
       error: String(error),
@@ -118,6 +118,7 @@ export async function POST(req: NextRequest) {
             : "Estamos recibiendo muchas consultas en este momento (límite del plan gratuito de la IA). Probá de nuevo en un minuto.",
           detalle: String(error),
           reintentable: true,
+          logId,
         },
         { status: 429 }
       );
@@ -126,6 +127,7 @@ export async function POST(req: NextRequest) {
       {
         error: "No pudimos procesar tu consulta. Intentá reformularla o probar con otra pregunta.",
         detalle: String(error),
+        logId,
       },
       { status: 502 }
     );
@@ -144,13 +146,13 @@ export async function POST(req: NextRequest) {
   }
 
   if (!decision.sql) {
-    await registrarConsulta({
+    const logId = await registrarConsulta({
       pregunta,
       resultado: "error_generacion",
       error: "El modelo no devolvió tipo 'fuera_de_alcance' ni SQL.",
     });
     return NextResponse.json(
-      { error: "No pudimos procesar tu consulta. Intentá nuevamente." },
+      { error: "No pudimos procesar tu consulta. Intentá nuevamente.", logId },
       { status: 502 }
     );
   }
@@ -158,7 +160,7 @@ export async function POST(req: NextRequest) {
   // --- Paso 5: validar el SQL antes de tocar la base ----------------------
   const validacion = validarSql(decision.sql);
   if (!validacion.valido || !validacion.sql) {
-    await registrarConsulta({
+    const logId = await registrarConsulta({
       pregunta,
       sqlGenerado: decision.sql,
       resultado: "error_validacion",
@@ -169,6 +171,7 @@ export async function POST(req: NextRequest) {
         error: "No pudimos procesar esta consulta. Intentá formularla de otra manera.",
         detalle: validacion.motivo,
         sql_original: decision.sql,
+        logId,
       },
       { status: 422 }
     );
@@ -181,7 +184,7 @@ export async function POST(req: NextRequest) {
     const resultado = await ejecutarSelect(validacion.sql);
     filas = resultado.filas;
   } catch (error) {
-    await registrarConsulta({
+    const logId = await registrarConsulta({
       pregunta,
       sqlGenerado: validacion.sql,
       resultado: "error_ejecucion",
@@ -192,6 +195,7 @@ export async function POST(req: NextRequest) {
         error: "No pudimos obtener la información en este momento. Intentá nuevamente.",
         detalle: String(error),
         sql: validacion.sql,
+        logId,
       },
       { status: 502 }
     );
