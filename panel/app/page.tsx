@@ -303,7 +303,7 @@ const PASOS_TOUR = [
       "El resultado completo queda en esta tabla, y podés bajarla a un Excel con el botón de arriba. El máximo permitido es de 1000 filas.",
   },
   {
-    el: "p-respuesta",
+    el: "p-disclaimer",
     titulo: "Verificá la información importante",
     texto:
       "Como toda respuesta generada con IA, conviene verificar los datos importantes antes de usarlos — por eso ese aviso acompaña cada respuesta.",
@@ -993,7 +993,7 @@ export default function Home() {
         <div className="answer-card" id="p-respuesta">
           <div className="label">Respuesta</div>
           <div className="answer-text">{formatearRespuesta(resultado.respuesta)}</div>
-          <div className="answer-disclaimer">
+          <div className="answer-disclaimer" id="p-disclaimer">
             Contenido generado con inteligencia artificial. Verificá la información importante antes de utilizarla.
           </div>
           {resultado.logId != null && (
