@@ -148,7 +148,7 @@ const EJEMPLOS = [
     etiqueta: "Cargos que se eligieron",
     pregunta:
       "¿Cuántos cargos se eligieron en cada distrito en 2025? Mostrar una tabla con " +
-      "columnas: distrito, Diputados Titulares, Senadores Titulares.",
+      "columnas, en este orden: cargo, distrito, cantidad.",
   },
 ];
 

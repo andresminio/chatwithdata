@@ -208,22 +208,42 @@ export const REGLAS_SQL = `
   PRESIDENTE Y VICE, que no tiene posicion ni TITULARES/SUPLENTES (ver
   diccionario, sección SUBCATEGORÍA): ahí "cargos que se eligen" es siempre
   1 fórmula por distrito único, no hace falta calcularlo.
-  Si la pregunta pide esto pivoteado en columnas por cargo (ej. columnas
-  "Diputados Titulares", "Senadores Titulares"), combinar con la regla de
-  columnas separadas por categoría, usando COUNT(DISTINCT ...) FILTER
-  dentro de cada rama en vez de SUM(CASE ...). Ejemplo para distrito x
-  Diputados/Senadores en 2025:
-    SELECT distrito,
-      COUNT(DISTINCT posicion) FILTER (
-        WHERE cargo = 'DIPUTADOS NACIONALES' AND subcategoria = 'TITULARES'
-      ) AS diputados_titulares,
-      COUNT(DISTINCT posicion) FILTER (
-        WHERE cargo = 'SENADORES NACIONALES' AND subcategoria = 'TITULARES'
-      ) AS senadores_titulares
+  Si la pregunta pide el desglose por cargo Y distrito (ej. "cuántos
+  cargos se eligieron en cada distrito"), NO pivotear en columnas por
+  cargo: usar formato largo, con GROUP BY cargo, distrito — así cada
+  cargo aparece solo en las filas donde realmente hubo elección ese año
+  (un cargo que no corresponde a esa elección, ver CASOS_LIMITE, no
+  genera filas, sin que el modelo tenga que razonar caso por caso qué
+  cargo aplica a qué año). El SELECT va en este orden de columnas: cargo,
+  distrito, cantidad — así el resultado queda agrupado visualmente por
+  cargo (ej. Diputados se repite una vez por cada uno de sus distritos,
+  Senadores una vez por cada distrito que renueva ese año, Presidente una
+  sola vez con distrito = 'DISTRITO ÚNICO'). Presidente y Vice es un caso
+  aparte: no tiene columna posicion ni TITULARES/SUPLENTES (ver
+  diccionario), así que "cantidad" ahí es un indicador simple (1 si hubo
+  fórmula presidencial ese año, no una cuenta de bancas), nunca
+  COUNT(DISTINCT posicion). NO mezclar la lógica de Presidente con la de
+  los demás cargos en una sola expresión CASE + agregación: separar en dos
+  SELECT independientes unidos con UNION ALL, cada uno simple, es más
+  confiable que una expresión combinada — un CASE mezclado con COUNT(...)
+  FILTER en la misma columna es fácil de reproducir mal entre una consulta
+  y otra. Ejemplo (reemplazar el año del WHERE por el que pida la
+  pregunta; se puede omitir el segundo SELECT si la pregunta ya filtró a
+  un año sin elección presidencial, ver CASOS_LIMITE):
+    SELECT cargo, distrito,
+      COUNT(DISTINCT posicion) FILTER (WHERE subcategoria = 'TITULARES') AS cantidad
     FROM v_candidaturas
-    WHERE eleccion = 2025
-    GROUP BY distrito
-    ORDER BY distrito
+    WHERE eleccion = 2025 AND cargo != 'PRESIDENTE Y VICE'
+    GROUP BY cargo, distrito
+
+    UNION ALL
+
+    SELECT cargo, distrito, 1 AS cantidad
+    FROM v_candidaturas
+    WHERE eleccion = 2025 AND cargo = 'PRESIDENTE Y VICE' AND subcategoria = 'PRESIDENTE'
+    GROUP BY cargo, distrito
+
+    ORDER BY cargo, distrito
 `.trim();
 
 export const CASOS_LIMITE = `
