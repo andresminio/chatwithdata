@@ -115,7 +115,7 @@ function formatearRespuesta(texto: string) {
 const EJEMPLOS = [
   {
     etiqueta: "Diputados Nacionales 2025",
-    pregunta: "Dame el listado de candidatos de 2025 en la categoría de Diputados Nacionales.",
+    pregunta: "¿Quiénes fueron los candidatos a Diputados Nacionales en 2025?",
   },
   {
     etiqueta: "Paridad de género",
@@ -781,7 +781,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="chips-zona">
+      <div className={`chips-zona${cargando || simularPensandoTour ? " oculta" : ""}`}>
         <div className={`chips-capa${mostrarEjemplos ? " visible" : " oculta"}`} id="p-chips-ejemplos">
           <p className="chips-anuncio">Podés preguntar por</p>
           <div className="chips-fila">
@@ -950,7 +950,6 @@ export default function Home() {
           <div>
             <strong>Error:</strong> {resultado.error}
           </div>
-          {resultado.detalle && <div className="error-detalle">{resultado.detalle}</div>}
           {resultado.reintentable && (
             <button className="retry-btn" onClick={consultar} disabled={cargando}>
               Reintentar
@@ -1542,6 +1541,16 @@ export default function Home() {
           position: relative;
           display: grid;
           margin-bottom: 32px;
+          max-height: 200px;
+          opacity: 1;
+          overflow: hidden;
+          transition: opacity 0.25s ease, max-height 0.25s ease, margin-bottom 0.25s ease;
+        }
+        .chips-zona.oculta {
+          opacity: 0;
+          max-height: 0;
+          margin-bottom: 0;
+          pointer-events: none;
         }
         .chips-capa {
           grid-area: 1 / 1;

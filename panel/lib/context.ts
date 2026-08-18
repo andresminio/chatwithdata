@@ -44,9 +44,16 @@ pide algo de esta lista, NO generar SQL: es fuera de alcance.
 `.trim();
 
 export const REGLAS_SQL = `
-- Generar únicamente una sentencia SELECT, de solo lectura.
-- Solo se puede referenciar v_candidaturas. No hay otras tablas ni joins posibles.
-- Incluir siempre LIMIT (1000 si la pregunta no pide un número puntual).
+- Generar únicamente una sentencia SELECT, de solo lectura. Se permite anteponer
+  un WITH con CTEs de solo lectura cuando haga falta (ej. una CTE con los
+  totales por grupo, y el SELECT final calculando el porcentaje contra ese
+  total) — es la forma preferida de responder preguntas que piden valores
+  absolutos y porcentuales a la vez, desglosados por varias columnas.
+- Solo se puede referenciar v_candidaturas (más los nombres de las propias
+  CTEs definidas en el WITH, si las hay). No hay otras tablas reales ni joins
+  contra otras tablas posibles.
+- Incluir siempre LIMIT (1000 si la pregunta no pide un número puntual) en el
+  SELECT final (no hace falta en las CTEs intermedias).
 - No usar punto y coma múltiple, comentarios SQL, ni DDL/DML de ningún tipo.
 - Si la pregunta es ambigua entre "candidaturas" (filas) y "personas"
   (individuos), preferir contar personas con COUNT(DISTINCT id_candidato)
@@ -69,13 +76,13 @@ export const REGLAS_SQL = `
   de cada candidatura, no solo el total"): el SELECT tiene que traer
   exactamente estas columnas, en este orden, ni una más ni una menos salvo
   que la pregunta pida explícitamente menos campos:
-    eleccion, etapa, distrito, cargo, agrupacion, subcategoria,
-    posicion, apellido, nombres
+    eleccion, etapa, distrito, cargo, apellido, nombres, subcategoria,
+    posicion, agrupacion
   Excepción: si el resultado puede incluir etapa PASO (la pregunta filtra
   por PASO, o no filtra etapa y por lo tanto puede traer PASO), agregar
-  también la columna lista inmediatamente después de agrupacion:
-    eleccion, etapa, distrito, cargo, agrupacion, lista, subcategoria,
-    posicion, apellido, nombres
+  también la columna lista al final:
+    eleccion, etapa, distrito, cargo, apellido, nombres, subcategoria,
+    posicion, agrupacion, lista
   Esta regla de columnas fijas NO aplica al modo Totales (agregaciones con
   COUNT/GROUP BY): ahí las columnas del SELECT dependen de por qué se pide
   desglosar.
