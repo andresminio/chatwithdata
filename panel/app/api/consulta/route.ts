@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     pregunta = String(body?.pregunta ?? "").trim();
   } catch {
-    return NextResponse.json({ error: "No pudimos procesar la consulta. Intentá nuevamente." }, { status: 400 });
+    return NextResponse.json({ error: "Ups, no pudimos procesar esta consulta. Probá reformularla." }, { status: 400 });
   }
 
   if (!pregunta) {
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json(
       {
-        error: "No pudimos procesar tu consulta. Intentá reformularla o probar con otra pregunta.",
+        error: "Ups, no pudimos procesar esta consulta. Probá reformularla.",
         detalle: String(error),
         logId,
       },
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
       error: "El modelo no devolvió tipo 'fuera_de_alcance' ni SQL.",
     });
     return NextResponse.json(
-      { error: "No pudimos procesar tu consulta. Intentá nuevamente.", logId },
+      { error: "Ups, no pudimos procesar esta consulta. Probá reformularla.", logId },
       { status: 502 }
     );
   }
@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(
       {
-        error: "No pudimos procesar esta consulta. Intentá formularla de otra manera.",
+        error: "Ups, no pudimos procesar esta consulta. Probá reformularla.",
         detalle: validacion.motivo,
         sql_original: decision.sql,
         logId,
@@ -192,7 +192,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(
       {
-        error: "No pudimos obtener la información en este momento. Intentá nuevamente.",
+        error: "Ups, no pudimos procesar esta consulta. Probá reformularla.",
         detalle: String(error),
         sql: validacion.sql,
         logId,

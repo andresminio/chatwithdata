@@ -958,7 +958,6 @@ export default function Home() {
           <div>
             <strong>Error:</strong> {resultado.error}
           </div>
-          {resultado.detalle && <div className="error-detalle">{resultado.detalle}</div>}
           {resultado.reintentable && (
             <button className="retry-btn" onClick={consultar} disabled={cargando}>
               Reintentar
