@@ -136,7 +136,9 @@ const EJEMPLOS = [
   },
   {
     etiqueta: "Encabezamientos de listas",
-    pregunta: "¿Cuántas mujeres y cuántos hombres encabezaron listas en 2025?",
+    pregunta:
+      "¿Cuántas listas de 2025 estuvieron encabezadas por mujeres y qué porcentaje " +
+      "representan, desagregado por cargo?",
   },
   {
     etiqueta: "Edades por cargo",

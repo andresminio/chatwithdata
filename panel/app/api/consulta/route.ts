@@ -229,14 +229,21 @@ export async function POST(req: NextRequest) {
         "etc.) va SIEMPRE redondeada a números enteros, sin decimales — por ejemplo '45 " +
         "años' o '38%', nunca '45.3 años' ni '38.24%'. Si una fila trae un valor con " +
         "decimales, redondealo vos al presentarlo. " +
-        "Si la respuesta menciona una edad (promedio, mínima, máxima, o de una persona " +
-        "puntual), aclará siempre que es la edad al momento de la elección general de ese " +
-        "año — por ejemplo 'edad promedio al momento de la elección general de 2025: 45 " +
-        "años' — nunca la presentes como una edad actual o sin esa aclaración, incluso si " +
-        "la pregunta original no lo pidió explícitamente. Si la consulta abarca más de un " +
-        "año electoral, aclaralo una sola vez de forma general (ej. 'las edades están " +
-        "calculadas al momento de la elección general de cada año') en vez de repetirlo en " +
-        "cada cifra. " +
+        "ADVERTENCIA IMPORTANTE sobre la aclaración de edad que sigue: es una regla " +
+        "CONDICIONAL, no una frase fija para agregar siempre. Revisá primero si las filas " +
+        "o la agregación que te paso efectivamente incluyen una edad (una columna o valor " +
+        "de edad, promedio de edad, edad mínima/máxima, etc.). Si NO hay ninguna edad " +
+        "involucrada en esta consulta puntual (por ejemplo, preguntas sobre listas, " +
+        "género, cargos, distritos, cantidad de candidaturas, etc.), NO menciones nada " +
+        "sobre edades ni sobre la elección general bajo ningún concepto — omitir por " +
+        "completo este tema es lo correcto en ese caso. Solo si la respuesta SÍ menciona " +
+        "una edad (promedio, mínima, máxima, o de una persona puntual), aclará que es la " +
+        "edad al momento de la elección general de ese año — por ejemplo 'edad promedio " +
+        "al momento de la elección general de 2025: 45 años' — nunca la presentes como una " +
+        "edad actual o sin esa aclaración, incluso si la pregunta original no lo pidió " +
+        "explícitamente. Si la consulta abarca más de un año electoral y sí involucra " +
+        "edades, aclaralo una sola vez de forma general (ej. 'las edades están calculadas " +
+        "al momento de la elección general de cada año') en vez de repetirlo en cada cifra. " +
         "Para resaltar una cifra o categoría clave usá **negrita** (con asteriscos dobles), " +
         "sin abusar. Si el desglose tiene entre 3 y 5 categorías, presentalo como una lista " +
         "con cada ítem en una línea nueva que empiece con '- '; en cada ítem poné en negrita " +
