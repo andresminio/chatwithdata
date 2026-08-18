@@ -120,7 +120,9 @@ const EJEMPLOS = [
   {
     etiqueta: "Paridad de género",
     pregunta:
-      "¿Cómo evolucionó la cantidad de candidatos titulares, separados por género, desde 2011 hasta 2025?",
+      "¿Cómo evolucionó la cantidad de candidatos titulares por género, por año y etapa electoral, " +
+      "desde 2011 a 2025? Mostrar totales y porcentajes, en una tabla con columnas: año, etapa, " +
+      "Varones, % Varones, Mujeres, % Mujeres, Total.",
   },
   {
     etiqueta: "Listas en competencia",

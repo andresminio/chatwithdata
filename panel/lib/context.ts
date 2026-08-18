@@ -97,6 +97,25 @@ export const REGLAS_SQL = `
   única etapa puntual (ej. "candidatos de Generales 2025"), ese filtro ya
   deja un solo grupo posible y no hace falta agregar eleccion/etapa al
   GROUP BY porque no aportan desglose.
+- Columnas separadas por categoría (ej. la pregunta pide explícitamente una
+  tabla con columnas del tipo "Varones, % Varones, Mujeres, % Mujeres,
+  Total", o en general pide desglosar una dimensión de pocos valores fijos
+  —como genero— EN COLUMNAS en vez de en filas): usar agregación
+  condicional en el SELECT, no GROUP BY sobre esa dimensión. Por ejemplo,
+  para pivotear genero en columnas:
+    SELECT eleccion, etapa,
+      SUM(CASE WHEN genero = 'M' THEN 1 ELSE 0 END) AS varones,
+      ROUND(100.0 * SUM(CASE WHEN genero = 'M' THEN 1 ELSE 0 END) / COUNT(*), 0) AS pct_varones,
+      SUM(CASE WHEN genero = 'F' THEN 1 ELSE 0 END) AS mujeres,
+      ROUND(100.0 * SUM(CASE WHEN genero = 'F' THEN 1 ELSE 0 END) / COUNT(*), 0) AS pct_mujeres,
+      COUNT(*) AS total
+    FROM v_candidaturas
+    WHERE subcategoria = 'TITULARES'
+    GROUP BY eleccion, etapa
+    ORDER BY eleccion, etapa
+  El GROUP BY en este caso sí respeta la regla de arriba (eleccion, etapa
+  como mínimo), pero NUNCA agrupa por la dimensión que se está pivoteando
+  en columnas.
 - Edad de un candidato (ej. "edad promedio", "edad al momento de la
   elección"): son AÑOS CUMPLIDOS a la fecha de la elección GENERAL de ese
   año electoral — NUNCA a fecha_eleccion de la fila (que puede ser la fecha
