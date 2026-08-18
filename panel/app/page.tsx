@@ -1111,6 +1111,188 @@ export default function Home() {
           color: var(--ink);
           margin: 0;
         }
+        .tour-oscurecedor {
+          position: fixed;
+          inset: 0;
+          z-index: 998;
+          pointer-events: auto;
+        }
+        .tour-spotlight {
+          position: absolute;
+          border-radius: 12px;
+          box-shadow: 0 0 0 9999px rgba(10, 16, 36, 0.6);
+          border: 2px solid var(--accent);
+          transition: all 0.35s ease;
+          pointer-events: none;
+        }
+        .tour-tooltip {
+          position: absolute;
+          z-index: 999;
+          max-width: 300px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 12px 32px rgba(10, 16, 36, 0.28);
+          padding: 16px 18px;
+          transition: all 0.35s ease;
+          pointer-events: auto;
+        }
+        .tour-paso-num {
+          font-size: 11px;
+          font-weight: 700;
+          color: var(--accent);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-bottom: 6px;
+        }
+        .tour-paso-titulo {
+          font-size: 15px;
+          font-weight: 700;
+          margin-bottom: 6px;
+          color: var(--ink);
+        }
+        .tour-paso-texto {
+          font-size: 13px;
+          line-height: 1.5;
+          color: var(--ink-soft);
+          margin-bottom: 14px;
+        }
+        .tour-paso-nav {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .tour-paso-dots {
+          display: flex;
+          gap: 4px;
+        }
+        .tour-paso-dots span {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: var(--border);
+        }
+        .tour-paso-dots span.activo {
+          background: var(--accent);
+          width: 14px;
+          border-radius: 3px;
+        }
+        .tour-paso-botones {
+          display: flex;
+          gap: 6px;
+        }
+        .tour-tooltip button {
+          border: none;
+          font-size: 12px;
+          font-weight: 600;
+          padding: 7px 12px;
+          border-radius: 7px;
+          cursor: pointer;
+        }
+        .tour-btn-siguiente {
+          background: var(--accent);
+          color: white;
+        }
+        .tour-btn-anterior {
+          background: var(--accent-soft);
+          color: var(--accent-profundo);
+        }
+        .tour-btn-saltar {
+          position: absolute;
+          top: 10px;
+          right: 12px;
+          background: none;
+          color: #a3aabd;
+          font-size: 16px;
+          padding: 2px 6px;
+        }
+
+        .tour-bienvenida {
+          position: fixed;
+          inset: 0;
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(10, 16, 36, 0.6);
+        }
+        .tour-bienvenida-caja {
+          background: white;
+          border-radius: 16px;
+          padding: 32px;
+          max-width: 380px;
+          text-align: center;
+          box-shadow: 0 20px 50px rgba(10, 16, 36, 0.35);
+        }
+        .tour-bienvenida-icono {
+          width: 52px;
+          height: 52px;
+          border-radius: 14px;
+          background: linear-gradient(135deg, var(--accent-profundo), var(--accent));
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto 16px;
+        }
+        .tour-bienvenida-icono svg {
+          width: 24px;
+          height: 24px;
+          color: white;
+        }
+        .tour-bienvenida-caja h2 {
+          font-size: 19px;
+          margin: 0 0 8px;
+        }
+        .tour-bienvenida-caja p {
+          font-size: 14px;
+          color: var(--ink-soft);
+          line-height: 1.55;
+          margin: 0 0 22px;
+        }
+        .tour-bienvenida-botones {
+          display: flex;
+          gap: 8px;
+          justify-content: center;
+        }
+        .tour-bienvenida-botones button {
+          border: none;
+          font-size: 13px;
+          font-weight: 600;
+          padding: 10px 18px;
+          border-radius: 9px;
+          cursor: pointer;
+        }
+        .tour-btn-empezar {
+          background: var(--accent);
+          color: white;
+        }
+        .tour-btn-ahora-no {
+          background: #f1f3f9;
+          color: var(--ink-soft);
+        }
+
+        .tour-reabrir {
+          position: fixed;
+          bottom: max(20px, env(safe-area-inset-bottom, 0px) + 14px);
+          right: 20px;
+          z-index: 900;
+          background: white;
+          border: 1px solid var(--border);
+          border-radius: 24px;
+          padding: 10px 16px;
+          font-size: 12px;
+          font-weight: 700;
+          color: var(--accent);
+          box-shadow: var(--shadow);
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .tour-reabrir svg {
+          width: 14px;
+          height: 14px;
+          flex-shrink: 0;
+        }
       `}</style>
 
       <style jsx>{`
@@ -1857,191 +2039,6 @@ export default function Home() {
         <span>{tourYaVisto ? "Ver el recorrido de nuevo" : "¿Primera vez por acá?"}</span>
       </button>
     )}
-
-    <style jsx global>{`
-      .tour-oscurecedor {
-        position: fixed;
-        inset: 0;
-        z-index: 998;
-        pointer-events: auto;
-      }
-      .tour-spotlight {
-        position: absolute;
-        border-radius: 12px;
-        box-shadow: 0 0 0 9999px rgba(10, 16, 36, 0.6);
-        border: 2px solid var(--accent);
-        transition: all 0.35s ease;
-        pointer-events: none;
-      }
-      .tour-tooltip {
-        position: absolute;
-        z-index: 999;
-        max-width: 300px;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 12px 32px rgba(10, 16, 36, 0.28);
-        padding: 16px 18px;
-        transition: all 0.35s ease;
-        pointer-events: auto;
-      }
-      .tour-paso-num {
-        font-size: 11px;
-        font-weight: 700;
-        color: var(--accent);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 6px;
-      }
-      .tour-paso-titulo {
-        font-size: 15px;
-        font-weight: 700;
-        margin-bottom: 6px;
-        color: var(--ink);
-      }
-      .tour-paso-texto {
-        font-size: 13px;
-        line-height: 1.5;
-        color: var(--ink-soft);
-        margin-bottom: 14px;
-      }
-      .tour-paso-nav {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-      }
-      .tour-paso-dots {
-        display: flex;
-        gap: 4px;
-      }
-      .tour-paso-dots span {
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        background: var(--border);
-      }
-      .tour-paso-dots span.activo {
-        background: var(--accent);
-        width: 14px;
-        border-radius: 3px;
-      }
-      .tour-paso-botones {
-        display: flex;
-        gap: 6px;
-      }
-      .tour-tooltip button {
-        border: none;
-        font-size: 12px;
-        font-weight: 600;
-        padding: 7px 12px;
-        border-radius: 7px;
-        cursor: pointer;
-      }
-      .tour-btn-siguiente {
-        background: var(--accent);
-        color: white;
-      }
-      .tour-btn-anterior {
-        background: var(--accent-soft);
-        color: var(--accent-profundo);
-      }
-      .tour-btn-saltar {
-        position: absolute;
-        top: 10px;
-        right: 12px;
-        background: none;
-        color: #a3aabd;
-        font-size: 16px;
-        padding: 2px 6px;
-      }
-
-      .tour-bienvenida {
-        position: fixed;
-        inset: 0;
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(10, 16, 36, 0.6);
-      }
-      .tour-bienvenida-caja {
-        background: white;
-        border-radius: 16px;
-        padding: 32px;
-        max-width: 380px;
-        text-align: center;
-        box-shadow: 0 20px 50px rgba(10, 16, 36, 0.35);
-      }
-      .tour-bienvenida-icono {
-        width: 52px;
-        height: 52px;
-        border-radius: 14px;
-        background: linear-gradient(135deg, var(--accent-profundo), var(--accent));
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 16px;
-      }
-      .tour-bienvenida-icono svg {
-        width: 24px;
-        height: 24px;
-        color: white;
-      }
-      .tour-bienvenida-caja h2 {
-        font-size: 19px;
-        margin: 0 0 8px;
-      }
-      .tour-bienvenida-caja p {
-        font-size: 14px;
-        color: var(--ink-soft);
-        line-height: 1.55;
-        margin: 0 0 22px;
-      }
-      .tour-bienvenida-botones {
-        display: flex;
-        gap: 8px;
-        justify-content: center;
-      }
-      .tour-bienvenida-botones button {
-        border: none;
-        font-size: 13px;
-        font-weight: 600;
-        padding: 10px 18px;
-        border-radius: 9px;
-        cursor: pointer;
-      }
-      .tour-btn-empezar {
-        background: var(--accent);
-        color: white;
-      }
-      .tour-btn-ahora-no {
-        background: #f1f3f9;
-        color: var(--ink-soft);
-      }
-
-      .tour-reabrir {
-        position: fixed;
-        bottom: max(20px, env(safe-area-inset-bottom, 0px) + 14px);
-        right: 20px;
-        z-index: 900;
-        background: white;
-        border: 1px solid var(--border);
-        border-radius: 24px;
-        padding: 10px 16px;
-        font-size: 12px;
-        font-weight: 700;
-        color: var(--accent);
-        box-shadow: var(--shadow);
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-      }
-      .tour-reabrir svg {
-        width: 14px;
-        height: 14px;
-        flex-shrink: 0;
-      }
-    `}</style>
     </>
   );
 }
