@@ -108,6 +108,42 @@ function formatearRespuesta(texto: string) {
   );
 }
 
+// Chips de preguntas de ejemplo: se muestran solo con el campo vacío y sin
+// ningún filtro elegido, a modo de shortcut + guía de qué se puede preguntar.
+// Deliberadamente no hay ningún chip que filtre por agrupación política, para
+// mantener la neutralidad del organismo.
+const EJEMPLOS = [
+  {
+    etiqueta: "Diputados Nacionales 2025",
+    pregunta: "Dame el listado de candidatos de 2025 en la categoría de Diputados Nacionales.",
+  },
+  {
+    etiqueta: "Paridad de género",
+    pregunta:
+      "¿Cómo evolucionó la cantidad de candidatos titulares, separados por género, desde 2011 hasta 2025?",
+  },
+  {
+    etiqueta: "Listas en competencia",
+    pregunta: "¿Cuántas listas se presentaron en cada etapa entre 2011 y 2025?",
+  },
+  {
+    etiqueta: "Candidatos con más postulaciones",
+    pregunta: "¿Qué candidatos se postularon más veces?",
+  },
+  {
+    etiqueta: "Encabezamientos de listas",
+    pregunta: "¿Cuántas mujeres y cuántos hombres encabezaron listas en 2025?",
+  },
+  {
+    etiqueta: "Edades por cargo",
+    pregunta: "¿Cuál es la edad promedio de los candidatos al momento de la elección, agrupada por cargo?",
+  },
+  {
+    etiqueta: "Cargos que se eligieron",
+    pregunta: "¿Qué cargos se eligieron en cada distrito en 2025?",
+  },
+];
+
 // Nivel 1: elige el modo de la respuesta. Excluyente entre sí (no tiene
 // sentido pedir "listado" y "total agregado" al mismo tiempo).
 const NIVEL1 = [
@@ -199,6 +235,125 @@ const CARGOS = [
 // una lista larguísima).
 const FILAS_POR_PAGINA = 25;
 
+// Recorrido guiado: 10 pasos con foco (spotlight) sobre la pantalla real.
+// "el" es el id del elemento a resaltar; "simularEscritura" completa el
+// campo con una pregunta de prueba (así se ven los chips de segmentación
+// reales, no una simulación aparte); "simularPensando" aplica la clase
+// visual del efecto "pensando" sin disparar una consulta real.
+const PASOS_TOUR = [
+  {
+    el: "p-badge",
+    titulo: "Un asistente de IA",
+    texto:
+      "El asistente traduce preguntas en lenguaje natural a consultas sobre las candidaturas nacionales. No hace falta saber programar ni cómo está armada la base de datos.",
+  },
+  {
+    el: "p-buscador",
+    titulo: "Escribí tu pregunta",
+    texto:
+      "Escribí lo que querés saber, como le preguntarías a una persona. También podés dictar tu consulta tocando el micrófono.",
+  },
+  {
+    el: "p-chips-ejemplos",
+    titulo: "¿No sabés por dónde arrancar?",
+    texto: "Tocá cualquiera de estos ejemplos y se completa la pregunta por vos. Estos temas cubren las consultas más comunes.",
+  },
+  {
+    el: "p-chips-filtro",
+    titulo: "Totales o Listado",
+    texto:
+      'Mientras escribís, estos chips cambian a "Totales" (para ver números y resúmenes) o "Listado" (para ver el detalle de cada candidatura). Podés usarlos para especificar tu consulta. También podés filtrar por año, etapa, género o distrito.',
+    simularEscritura: true,
+  },
+  {
+    el: "p-buscador",
+    titulo: "Pensando",
+    texto: "La IA arma la consulta y busca los datos por vos.",
+    simularPensando: true,
+  },
+  {
+    el: "p-respuesta",
+    titulo: "La respuesta en palabras simples",
+    texto: "La IA redacta una respuesta breve a partir de los datos reales.",
+  },
+  {
+    el: "p-sql",
+    titulo: "Transparencia total",
+    texto:
+      "Todo lo que se calcula queda visible: podés desplegar la consulta SQL exacta que se ejecutó y una explicación de qué hace, en palabras simples.",
+  },
+  {
+    el: "p-tabla",
+    titulo: "El detalle completo",
+    texto:
+      "El resultado completo queda en esta tabla, y podés bajarla a un Excel con el botón de arriba. El máximo permitido es de 1000 filas.",
+  },
+  {
+    el: "p-respuesta",
+    titulo: "Verificá la información importante",
+    texto:
+      "Como toda respuesta generada con IA, conviene verificar los datos importantes antes de usarlos — por eso ese aviso acompaña cada respuesta.",
+  },
+  {
+    el: "p-reportar",
+    titulo: "¿Algo no resultó como esperabas?",
+    texto: "Podés reportarlo presionando este link para que revisemos qué pasó.",
+  },
+];
+const PREGUNTA_DEMO_TOUR = "Dame el listado de candidatos de 2025 en Diputados Nacionales";
+
+// Resultado de muestra que se usa SOLO durante el recorrido guiado, cuando
+// todavía no se hizo ninguna consulta real: así el tour puede mostrar y
+// resaltar la tarjeta de respuesta, el SQL y la tabla con contenido de
+// ejemplo. Si ya había una consulta real en pantalla, el tour resalta esa
+// en vez de reemplazarla (ver abrirseTour / cerrarTour).
+const RESULTADO_DEMO_TOUR: RespuestaConsulta = {
+  respuesta:
+    "Para el año electoral 2025 hubo un total de **2704 candidaturas**. El detalle completo está en la tabla debajo.",
+  sql: "SELECT eleccion, etapa, distrito, cargo, agrupacion, subcategoria, posicion, apellido, nombres\nFROM v_candidaturas\nWHERE eleccion = 2025 AND cargo = 'DIPUTADOS NACIONALES'\nLIMIT 1000",
+  explicacionSql:
+    "La consulta filtra las candidaturas de 2025 en la categoría de Diputados Nacionales y muestra el listado completo.",
+  filas: [
+    {
+      eleccion: 2025,
+      etapa: "Generales",
+      distrito: "BUENOS AIRES",
+      cargo: "DIPUTADOS NACIONALES",
+      agrupacion: "UNIÓN POR LA PATRIA",
+      subcategoria: "TITULARES",
+      posicion: 1,
+      apellido: "Fernández",
+      nombres: "Ana",
+    },
+    {
+      eleccion: 2025,
+      etapa: "Generales",
+      distrito: "CÓRDOBA",
+      cargo: "DIPUTADOS NACIONALES",
+      agrupacion: "JUNTOS POR EL CAMBIO",
+      subcategoria: "TITULARES",
+      posicion: 1,
+      apellido: "Gómez",
+      nombres: "Luis",
+    },
+    {
+      eleccion: 2025,
+      etapa: "Generales",
+      distrito: "SANTA FE",
+      cargo: "DIPUTADOS NACIONALES",
+      agrupacion: "FRENTE RENOVADOR",
+      subcategoria: "TITULARES",
+      posicion: 2,
+      apellido: "Pérez",
+      nombres: "Marta",
+    },
+  ],
+  truncado: true,
+  limite: 1000,
+  total: 2704,
+  logId: -1,
+};
+
 export default function Home() {
   const [pregunta, setPregunta] = useState("");
   const [dictadoSoportado, setDictadoSoportado] = useState(false);
@@ -216,6 +371,18 @@ export default function Home() {
   const [resultado, setResultado] = useState<RespuestaConsulta | null>(null);
   const [reportado, setReportado] = useState(false);
   const [paginaActual, setPaginaActual] = useState(1);
+
+  // Recorrido guiado.
+  const [tourBienvenidaVisible, setTourBienvenidaVisible] = useState(false);
+  const [tourActivo, setTourActivo] = useState(false);
+  const [pasoTour, setPasoTour] = useState(0);
+  const [tourYaVisto, setTourYaVisto] = useState(false);
+  const [simularPensandoTour, setSimularPensandoTour] = useState(false);
+  const preguntaAntesDelTourRef = useRef("");
+  const resultadoEraDemoRef = useRef(false);
+  const spotlightRef = useRef<HTMLDivElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
+  const elConEspacioExtraRef = useRef<HTMLElement | null>(null);
 
   // Dictado por voz: Web Speech API nativa del navegador, sin backend ni
   // dependencia nueva. Solo Chrome/Edge (y derivados) la traen habilitada
@@ -275,6 +442,112 @@ export default function Home() {
     setEscuchando(true);
     reconocimiento.start();
   }
+
+  // ---- Recorrido guiado ----
+
+  function abrirBienvenidaTour() {
+    setTourBienvenidaVisible(true);
+  }
+
+  function empezarTour() {
+    setTourBienvenidaVisible(false);
+    // Si todavía no se hizo ninguna consulta real, se usa una de muestra
+    // para poder resaltar la respuesta, el SQL y la tabla. Si ya había una
+    // consulta real en pantalla, se resalta esa (más representativo).
+    if (!resultado) {
+      resultadoEraDemoRef.current = true;
+      setResultado(RESULTADO_DEMO_TOUR);
+    }
+    preguntaAntesDelTourRef.current = pregunta;
+    setPasoTour(0);
+    setTourActivo(true);
+  }
+
+  function cerrarTourDelTodo() {
+    setTourActivo(false);
+    setTourBienvenidaVisible(false);
+    setSimularPensandoTour(false);
+    setPregunta(preguntaAntesDelTourRef.current);
+    if (resultadoEraDemoRef.current) {
+      setResultado(null);
+      resultadoEraDemoRef.current = false;
+    }
+    if (elConEspacioExtraRef.current) {
+      elConEspacioExtraRef.current.style.marginBottom = "";
+      elConEspacioExtraRef.current = null;
+    }
+    setTourYaVisto(true);
+  }
+
+  function siguientePasoTour() {
+    if (pasoTour === PASOS_TOUR.length - 1) {
+      cerrarTourDelTodo();
+      return;
+    }
+    setPasoTour((p) => p + 1);
+  }
+
+  function anteriorPasoTour() {
+    setPasoTour((p) => Math.max(0, p - 1));
+  }
+
+  // Posiciona el spotlight + tooltip sobre el elemento del paso actual, y le
+  // reserva a su tarjeta el margen-bottom que el tooltip necesita para no
+  // superponerse con la tarjeta siguiente (mismo criterio usado en el resto
+  // del recorrido: reservar espacio en vez de "adivinar" arriba/abajo).
+  useEffect(() => {
+    if (!tourActivo) return;
+    const paso = PASOS_TOUR[pasoTour];
+    setSimularPensandoTour(!!paso.simularPensando);
+    setPregunta(paso.simularEscritura ? PREGUNTA_DEMO_TOUR : preguntaAntesDelTourRef.current);
+
+    const cuadro = tooltipRef.current;
+    const spotlight = spotlightRef.current;
+    if (!cuadro || !spotlight) return;
+
+    const timeoutId = window.setTimeout(() => {
+      const el = document.getElementById(paso.el);
+      if (!el) return;
+
+      if (elConEspacioExtraRef.current) {
+        elConEspacioExtraRef.current.style.marginBottom = "";
+        elConEspacioExtraRef.current = null;
+      }
+      const alturaTooltip = cuadro.offsetHeight;
+      let elParaEspacio: HTMLElement | null = el;
+      while (elParaEspacio && elParaEspacio !== document.body && !elParaEspacio.nextElementSibling) {
+        elParaEspacio = elParaEspacio.parentElement;
+      }
+      if (elParaEspacio === document.body) elParaEspacio = null;
+      if (elParaEspacio) {
+        const margenActual = parseFloat(getComputedStyle(elParaEspacio).marginBottom) || 0;
+        const margenNecesario = alturaTooltip + 32;
+        if (margenNecesario > margenActual) {
+          elParaEspacio.style.transition = "margin-bottom 0.3s ease";
+          elParaEspacio.style.marginBottom = `${margenNecesario}px`;
+          elConEspacioExtraRef.current = elParaEspacio;
+        }
+      }
+
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      window.setTimeout(() => {
+        const r = el.getBoundingClientRect();
+        const pad = 8;
+        spotlight.style.left = `${r.left - pad}px`;
+        spotlight.style.top = `${r.top - pad}px`;
+        spotlight.style.width = `${r.width + pad * 2}px`;
+        spotlight.style.height = `${r.height + pad * 2}px`;
+
+        let ttTop = r.bottom + 16;
+        ttTop = Math.max(16, Math.min(ttTop, window.innerHeight - alturaTooltip - 16));
+        const ttLeft = Math.max(16, Math.min(r.left, window.innerWidth - 320));
+        cuadro.style.top = `${ttTop}px`;
+        cuadro.style.left = `${ttLeft}px`;
+      }, 320);
+    }, 60);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [pasoTour, tourActivo]);
 
   async function reportarProblema() {
     if (reportado || !resultado?.logId) return;
@@ -437,6 +710,11 @@ export default function Home() {
     }
   }
 
+  // Los chips de ejemplo son la guía inicial: apenas hay texto en el campo
+  // (tipeado, dictado o por haber tocado un chip de ejemplo) o ya se eligió
+  // un modo, se corren para dejar lugar a los chips de segmentación.
+  const mostrarEjemplos = !pregunta.trim() && !nivel1Activo;
+
   const columnas = resultado?.filas?.[0] ? Object.keys(resultado.filas[0]) : [];
   const totalPaginas = resultado?.filas
     ? Math.max(1, Math.ceil(resultado.filas.length / FILAS_POR_PAGINA))
@@ -449,8 +727,9 @@ export default function Home() {
     : [];
 
   return (
+    <>
     <main className="wrap">
-      <span className="badge">
+      <span className="badge" id="p-badge">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
           <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />
         </svg>
@@ -462,12 +741,12 @@ export default function Home() {
         Accedé a información sobre precandidaturas y candidaturas electorales nacionales de 2011 a 2025 mediante lenguaje natural.
       </p>
 
-      <div className="search-card">
+      <div className={`search-card${cargando || simularPensandoTour ? " pensando" : ""}`} id="p-buscador">
         <input
           value={pregunta}
           onChange={(e) => setPregunta(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && consultar()}
-          placeholder="¿Cuántas mujeres encabezaron listas en 2025?"
+          placeholder="¿Qué querés saber sobre las candidaturas?"
         />
         {dictadoSoportado && (
           <button
@@ -485,54 +764,80 @@ export default function Home() {
           </button>
         )}
         <button onClick={consultar} disabled={cargando}>
-          {cargando ? (
-            "Consultando..."
-          ) : (
-            <>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="m21 21-4.3-4.3M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
-              </svg>
-              Preguntar
-            </>
-          )}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="m21 21-4.3-4.3M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
+          </svg>
+          Preguntar
         </button>
+        <div className="overlay-pensando">
+          <span className="texto-pensando">
+            Pensando
+            <span className="puntos">
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+          </span>
+        </div>
       </div>
 
-      <div className="chips">
-        {NIVEL1.filter((f) => !nivel1Activo || f.label === nivel1Activo).map((f) => (
-          <button
-            key={f.label}
-            className={`chip${nivel1Activo === f.label ? " chip-activo" : ""}`}
-            onClick={() => toggleNivel1(f.label)}
-            disabled={cargando}
-          >
-            {f.label}
-          </button>
-        ))}
-        {nivel1Activo &&
-          SUBFILTROS[nivel1Activo]
-            // Si ya se eligió un año sin PASO, no ofrecer PASO — salvo que
-            // Generales también esté activo: ahí la etapa ya no es solo
-            // PASO, así que el año sigue teniendo sentido (ver ANIOS_SIN_PASO).
-            .filter(
-              (f) =>
-                !(
-                  f.label === "PASO" &&
-                  anioActivo &&
-                  ANIOS_SIN_PASO.has(anioActivo) &&
-                  !subfiltrosActivos.includes("Generales")
-                )
-            )
-            .map((f) => (
+      <div className="chips-zona">
+        <div className={`chips-capa${mostrarEjemplos ? " visible" : " oculta"}`} id="p-chips-ejemplos">
+          <p className="chips-anuncio">Podés preguntar por</p>
+          <div className="chips-fila">
+            {EJEMPLOS.map((ej) => (
+              <button
+                key={ej.etiqueta}
+                type="button"
+                className="chip-ejemplo"
+                onClick={() => setPregunta(ej.pregunta)}
+                disabled={cargando}
+              >
+                <span className="icono-ejemplo">✦</span> {ej.etiqueta}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className={`chips-capa${mostrarEjemplos ? " oculta" : " visible"}`} id="p-chips-filtro">
+          <p className="chips-anuncio">Podés segmentar por</p>
+          <div className="chips">
+            {NIVEL1.filter((f) => !nivel1Activo || f.label === nivel1Activo).map((f) => (
               <button
                 key={f.label}
-                className={`chip${subfiltrosActivos.includes(f.label) ? " chip-activo" : ""}`}
-                onClick={() => toggleSubfiltro(f.label)}
+                className={`chip${nivel1Activo === f.label ? " chip-activo" : ""}`}
+                onClick={() => toggleNivel1(f.label)}
                 disabled={cargando}
               >
                 {f.label}
               </button>
             ))}
+            {nivel1Activo &&
+              SUBFILTROS[nivel1Activo]
+                // Si ya se eligió un año sin PASO, no ofrecer PASO — salvo que
+                // Generales también esté activo: ahí la etapa ya no es solo
+                // PASO, así que el año sigue teniendo sentido (ver ANIOS_SIN_PASO).
+                .filter(
+                  (f) =>
+                    !(
+                      f.label === "PASO" &&
+                      anioActivo &&
+                      ANIOS_SIN_PASO.has(anioActivo) &&
+                      !subfiltrosActivos.includes("Generales")
+                    )
+                )
+                .map((f) => (
+                  <button
+                    key={f.label}
+                    className={`chip${subfiltrosActivos.includes(f.label) ? " chip-activo" : ""}`}
+                    onClick={() => toggleSubfiltro(f.label)}
+                    disabled={cargando}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+          </div>
+        </div>
       </div>
 
       {nivel1Activo && subfiltrosActivos.includes(ELEGIR_ANIO) && (
@@ -655,7 +960,7 @@ export default function Home() {
       )}
 
       {resultado?.respuesta && (
-        <div className="answer-card">
+        <div className="answer-card" id="p-respuesta">
           <div className="label">Respuesta</div>
           <div className="answer-text">{formatearRespuesta(resultado.respuesta)}</div>
           <div className="answer-disclaimer">
@@ -669,7 +974,7 @@ export default function Home() {
                 ) : (
                   <>
                     ¿Algo no resultó como esperabas? Reportalo presionando{" "}
-                    <button type="button" className="reporte-link" onClick={reportarProblema}>
+                    <button type="button" className="reporte-link" id="p-reportar" onClick={reportarProblema}>
                       acá
                     </button>
                     .
@@ -682,7 +987,7 @@ export default function Home() {
       )}
 
       {resultado?.sql && (
-        <details className="sql-card">
+        <details className="sql-card" id="p-sql">
           <summary className="sql-header">
             <span className="left">
               <span className="icon">SQL</span>
@@ -697,7 +1002,7 @@ export default function Home() {
       )}
 
       {resultado?.filas && resultado.filas.length > 0 && (
-        <div className="table-card">
+        <div className="table-card" id="p-tabla">
           <div className="table-header">
             <span className="table-header-title">
               Resultados{" "}
@@ -792,8 +1097,9 @@ export default function Home() {
           --ink: #1a1d29;
           --ink-soft: #5b5f73;
           --border: #e6e8f0;
-          --accent: #4f46e5;
-          --accent-soft: #eef0ff;
+          --accent: #2f6feb;
+          --accent-profundo: #142854;
+          --accent-soft: #eaf1ff;
           --accent-2: #06b6a4;
           --radius: 14px;
           --shadow: 0 1px 2px rgba(16, 17, 35, 0.04), 0 8px 24px rgba(16, 17, 35, 0.06);
@@ -818,12 +1124,9 @@ export default function Home() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          background: var(--accent-soft);
           color: var(--accent);
           font-size: 12px;
-          font-weight: 600;
-          padding: 5px 12px;
-          border-radius: 999px;
+          font-weight: 700;
           margin-bottom: 18px;
         }
         .badge svg {
@@ -837,7 +1140,7 @@ export default function Home() {
           margin: 0 0 10px 0;
           letter-spacing: -0.02em;
           font-weight: 700;
-          background: linear-gradient(90deg, #1a1d29, #3d3fae);
+          background: linear-gradient(90deg, var(--ink), var(--accent));
           -webkit-background-clip: text;
           background-clip: text;
           color: transparent;
@@ -851,6 +1154,7 @@ export default function Home() {
         }
 
         .search-card {
+          position: relative;
           background: var(--card);
           border: 1px solid var(--border);
           border-radius: var(--radius);
@@ -858,8 +1162,119 @@ export default function Home() {
           padding: 8px;
           display: flex;
           gap: 8px;
+          overflow: hidden;
           margin-bottom: 16px;
-          transition: box-shadow 0.15s, border-color 0.15s;
+          transition: box-shadow 0.15s, border-color 0.15s, border-radius 0.4s ease;
+        }
+        .search-card.pensando {
+          border-color: transparent;
+          border-radius: 16px;
+          cursor: default;
+        }
+        .search-card.pensando input,
+        .search-card.pensando .mic-btn,
+        .search-card.pensando button:not(.mic-btn) {
+          opacity: 0;
+          pointer-events: none;
+        }
+        .overlay-pensando {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          border-radius: 15px;
+          background: linear-gradient(
+            120deg,
+            rgba(20, 40, 84, 0.82),
+            rgba(47, 111, 235, 0.68),
+            rgba(20, 40, 84, 0.82)
+          );
+          background-size: 200% 200%;
+          backdrop-filter: blur(14px) saturate(160%);
+          -webkit-backdrop-filter: blur(14px) saturate(160%);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          color: white;
+          font-weight: 600;
+          font-size: 15px;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.35s ease;
+        }
+        /* la animación va SOLO acá, scopeada al estado activo: si quedara en
+           la regla base de .overlay-pensando, el "animation" pisa el
+           opacity:0 de reposo (las animaciones ganan sobre el valor estático
+           de la propiedad) y el efecto queda tenue pero visible siempre. */
+        .search-card.pensando .overlay-pensando {
+          opacity: 1;
+          pointer-events: auto;
+          animation: recorrido-gradiente 3.4s ease-in-out infinite,
+            respiracion-pensando 2.8s ease-in-out infinite;
+        }
+        .overlay-pensando::before {
+          content: "";
+          position: absolute;
+          width: 160px;
+          height: 160px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(255, 255, 255, 0.5), transparent 70%);
+          filter: blur(6px);
+          animation: flotar-pensando 4.5s ease-in-out infinite;
+        }
+        .overlay-pensando::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.25) 50%, transparent 70%);
+          background-size: 250% 250%;
+          animation: brillo-pensando 3.2s ease-in-out infinite;
+        }
+        @keyframes recorrido-gradiente {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes respiracion-pensando {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.88; }
+        }
+        @keyframes flotar-pensando {
+          0%, 100% { transform: translate(-70px, -10px) scale(1); }
+          50% { transform: translate(70px, 10px) scale(1.15); }
+        }
+        @keyframes brillo-pensando {
+          0% { background-position: -50% -50%; }
+          100% { background-position: 150% 150%; }
+        }
+        .texto-pensando {
+          position: relative;
+          z-index: 1;
+          display: inline-flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .texto-pensando .puntos {
+          display: inline-flex;
+          gap: 4px;
+        }
+        .texto-pensando .puntos span {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: white;
+          animation: rebote-pensando 1.2s ease-in-out infinite;
+          opacity: 0.55;
+        }
+        .texto-pensando .puntos span:nth-child(2) {
+          animation-delay: 0.15s;
+        }
+        .texto-pensando .puntos span:nth-child(3) {
+          animation-delay: 0.3s;
+        }
+        @keyframes rebote-pensando {
+          0%, 80%, 100% { transform: translateY(0); opacity: 0.55; }
+          40% { transform: translateY(-4px); opacity: 1; }
         }
         .search-card:focus-within {
           border-color: var(--accent);
@@ -882,14 +1297,14 @@ export default function Home() {
           align-items: center;
           gap: 8px;
           border: none;
-          background: linear-gradient(135deg, var(--accent), #6d5ff5);
+          background: linear-gradient(135deg, var(--accent-profundo), var(--accent));
           color: white;
           font-weight: 600;
           font-size: 14px;
           padding: 0 20px;
           border-radius: 9px;
           cursor: pointer;
-          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.28);
+          box-shadow: 0 4px 14px rgba(47, 111, 235, 0.3);
         }
         .search-card button:disabled {
           opacity: 0.7;
@@ -940,7 +1355,57 @@ export default function Home() {
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
+        }
+        .chips-zona {
+          position: relative;
+          display: grid;
           margin-bottom: 32px;
+        }
+        .chips-capa {
+          grid-area: 1 / 1;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          transition: opacity 0.32s ease, transform 0.32s ease;
+        }
+        .chips-capa.oculta {
+          opacity: 0;
+          transform: translateY(-6px);
+          pointer-events: none;
+        }
+        .chips-capa.visible {
+          opacity: 1;
+          transform: translateY(0);
+          pointer-events: auto;
+        }
+        .chips-anuncio {
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--ink-soft);
+          margin: 0;
+        }
+        .chips-fila {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .chip-ejemplo {
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--accent-profundo);
+          background: var(--accent-soft);
+          border: 1px dashed #c7d6f5;
+          padding: 8px 14px;
+          border-radius: 999px;
+          cursor: pointer;
+        }
+        .chip-ejemplo:hover {
+          border-color: var(--accent);
+          border-style: solid;
+        }
+        .chip-ejemplo .icono-ejemplo {
+          opacity: 0.7;
+          margin-right: 2px;
         }
         .chips-sub-wrap {
           border-top: 1px solid var(--border);
@@ -1325,5 +1790,258 @@ export default function Home() {
         }
       `}</style>
     </main>
+
+    {tourBienvenidaVisible && (
+      <div className="tour-bienvenida">
+        <div className="tour-bienvenida-caja">
+          <div className="tour-bienvenida-icono">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />
+            </svg>
+          </div>
+          <h2>¿Primera vez por acá?</h2>
+          <p>
+            Te mostramos en pocos pasos cómo hacer preguntas, interpretar las respuestas y sacarle el
+            máximo beneficio al asistente. Tarda menos de un minuto.
+          </p>
+          <div className="tour-bienvenida-botones">
+            <button type="button" className="tour-btn-ahora-no" onClick={cerrarTourDelTodo}>
+              Ahora no
+            </button>
+            <button type="button" className="tour-btn-empezar" onClick={empezarTour}>
+              Empezar el recorrido
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {tourActivo && (
+      <div className="tour-oscurecedor">
+        <div className="tour-spotlight" ref={spotlightRef} />
+        <div className="tour-tooltip" ref={tooltipRef}>
+          <button type="button" className="tour-btn-saltar" onClick={cerrarTourDelTodo} aria-label="Cerrar recorrido">
+            ✕
+          </button>
+          <div className="tour-paso-num">
+            Paso {pasoTour + 1} de {PASOS_TOUR.length}
+          </div>
+          <div className="tour-paso-titulo">{PASOS_TOUR[pasoTour].titulo}</div>
+          <div className="tour-paso-texto">{PASOS_TOUR[pasoTour].texto}</div>
+          <div className="tour-paso-nav">
+            <div className="tour-paso-dots">
+              {PASOS_TOUR.map((_, i) => (
+                <span key={i} className={i === pasoTour ? "activo" : ""} />
+              ))}
+            </div>
+            <div className="tour-paso-botones">
+              {pasoTour > 0 && (
+                <button type="button" className="tour-btn-anterior" onClick={anteriorPasoTour}>
+                  Atrás
+                </button>
+              )}
+              <button type="button" className="tour-btn-siguiente" onClick={siguientePasoTour}>
+                {pasoTour === PASOS_TOUR.length - 1 ? "Entendido" : "Siguiente"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {!tourBienvenidaVisible && !tourActivo && (
+      <button type="button" className="tour-reabrir" onClick={abrirBienvenidaTour}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />
+        </svg>
+        <span>{tourYaVisto ? "Ver el recorrido de nuevo" : "¿Primera vez por acá?"}</span>
+      </button>
+    )}
+
+    <style jsx global>{`
+      .tour-oscurecedor {
+        position: fixed;
+        inset: 0;
+        z-index: 998;
+        pointer-events: auto;
+      }
+      .tour-spotlight {
+        position: absolute;
+        border-radius: 12px;
+        box-shadow: 0 0 0 9999px rgba(10, 16, 36, 0.6);
+        border: 2px solid var(--accent);
+        transition: all 0.35s ease;
+        pointer-events: none;
+      }
+      .tour-tooltip {
+        position: absolute;
+        z-index: 999;
+        max-width: 300px;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 12px 32px rgba(10, 16, 36, 0.28);
+        padding: 16px 18px;
+        transition: all 0.35s ease;
+        pointer-events: auto;
+      }
+      .tour-paso-num {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+      }
+      .tour-paso-titulo {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: var(--ink);
+      }
+      .tour-paso-texto {
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--ink-soft);
+        margin-bottom: 14px;
+      }
+      .tour-paso-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .tour-paso-dots {
+        display: flex;
+        gap: 4px;
+      }
+      .tour-paso-dots span {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        background: var(--border);
+      }
+      .tour-paso-dots span.activo {
+        background: var(--accent);
+        width: 14px;
+        border-radius: 3px;
+      }
+      .tour-paso-botones {
+        display: flex;
+        gap: 6px;
+      }
+      .tour-tooltip button {
+        border: none;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 7px 12px;
+        border-radius: 7px;
+        cursor: pointer;
+      }
+      .tour-btn-siguiente {
+        background: var(--accent);
+        color: white;
+      }
+      .tour-btn-anterior {
+        background: var(--accent-soft);
+        color: var(--accent-profundo);
+      }
+      .tour-btn-saltar {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        background: none;
+        color: #a3aabd;
+        font-size: 16px;
+        padding: 2px 6px;
+      }
+
+      .tour-bienvenida {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(10, 16, 36, 0.6);
+      }
+      .tour-bienvenida-caja {
+        background: white;
+        border-radius: 16px;
+        padding: 32px;
+        max-width: 380px;
+        text-align: center;
+        box-shadow: 0 20px 50px rgba(10, 16, 36, 0.35);
+      }
+      .tour-bienvenida-icono {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--accent-profundo), var(--accent));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 16px;
+      }
+      .tour-bienvenida-icono svg {
+        width: 24px;
+        height: 24px;
+        color: white;
+      }
+      .tour-bienvenida-caja h2 {
+        font-size: 19px;
+        margin: 0 0 8px;
+      }
+      .tour-bienvenida-caja p {
+        font-size: 14px;
+        color: var(--ink-soft);
+        line-height: 1.55;
+        margin: 0 0 22px;
+      }
+      .tour-bienvenida-botones {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+      }
+      .tour-bienvenida-botones button {
+        border: none;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 10px 18px;
+        border-radius: 9px;
+        cursor: pointer;
+      }
+      .tour-btn-empezar {
+        background: var(--accent);
+        color: white;
+      }
+      .tour-btn-ahora-no {
+        background: #f1f3f9;
+        color: var(--ink-soft);
+      }
+
+      .tour-reabrir {
+        position: fixed;
+        bottom: max(20px, env(safe-area-inset-bottom, 0px) + 14px);
+        right: 20px;
+        z-index: 900;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 10px 16px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--accent);
+        box-shadow: var(--shadow);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .tour-reabrir svg {
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+      }
+    `}</style>
+    </>
   );
 }
