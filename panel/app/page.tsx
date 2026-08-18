@@ -1549,7 +1549,7 @@ export default function Home() {
           position: relative;
           display: grid;
           margin-bottom: 32px;
-          max-height: 200px;
+          max-height: 260px;
           opacity: 1;
           overflow: hidden;
           transition: opacity 0.25s ease, max-height 0.25s ease, margin-bottom 0.25s ease;
@@ -1568,6 +1568,10 @@ export default function Home() {
           transition: opacity 0.32s ease, transform 0.32s ease;
         }
         .chips-capa.oculta {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
           opacity: 0;
           transform: translateY(-6px);
           pointer-events: none;
