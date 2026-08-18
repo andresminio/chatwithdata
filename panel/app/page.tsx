@@ -115,7 +115,9 @@ function formatearRespuesta(texto: string) {
 const EJEMPLOS = [
   {
     etiqueta: "Diputados Nacionales 2025",
-    pregunta: "¿Quiénes fueron los candidatos a Diputados Nacionales en 2025?",
+    pregunta:
+      "¿Quiénes fueron los candidatos titulares a Diputados Nacionales en las elecciones " +
+      "generales de 2025?",
   },
   {
     etiqueta: "Paridad de género",
@@ -132,17 +134,21 @@ const EJEMPLOS = [
   },
   {
     etiqueta: "Candidatos con más postulaciones",
-    pregunta: "¿Qué candidatos registraron la mayor cantidad de postulaciones?",
+    pregunta:
+      "¿Cuáles son los 10 candidatos con más postulaciones a lo largo de todas las " +
+      "elecciones?",
   },
   {
     etiqueta: "Encabezamientos de listas",
     pregunta:
-      "¿Cuántas listas de 2025 estuvieron encabezadas por mujeres y qué porcentaje " +
-      "representan, desagregado por cargo?",
+      "¿Cuántas listas de las elecciones generales de 2025 estuvieron encabezadas por " +
+      "mujeres, y qué porcentaje representan, desagregado por cargo?",
   },
   {
     etiqueta: "Edades por cargo",
-    pregunta: "¿Cuál es la edad promedio de los candidatos por cargo?",
+    pregunta:
+      "¿Cuál es la edad promedio de los candidatos al momento de la elección, agrupada " +
+      "por cargo?",
   },
   {
     etiqueta: "Cargos que se eligieron",
@@ -754,7 +760,7 @@ export default function Home() {
           value={pregunta}
           onChange={(e) => setPregunta(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && consultar()}
-          placeholder="¿Qué querés saber sobre las candidaturas?"
+          placeholder="¿Qué te gustaría saber sobre las candidaturas?"
         />
         {dictadoSoportado && (
           <button
