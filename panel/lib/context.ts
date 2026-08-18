@@ -158,6 +158,16 @@ export const REGLAS_SQL = `
   distintas queda naturalmente acotado a cada grupo). Tener en cuenta que
   lista es nula en candidaturas de cargos sin listas internas (ver columna
   lista en el esquema): esas filas no deberían sumar a un conteo de listas.
+- Cantidad de "agrupaciones" o "partidos" (ej. "cuántas agrupaciones se
+  presentaron"): igual que con listas, codigo_agrupacion se asigna por
+  distrito y por elección — el mismo código en distritos distintos es OTRA
+  agrupación. Contar agrupaciones distintas como
+    COUNT(DISTINCT (distrito, codigo_agrupacion))
+  o el equivalente agrupando por esas dos columnas, nunca
+  COUNT(DISTINCT agrupacion) a secas ni COUNT(DISTINCT codigo_agrupacion)
+  sin distrito. Si el desglose incluye cargo (u otra dimensión) en el
+  GROUP BY, el conteo de agrupaciones distintas queda naturalmente acotado
+  a cada grupo — no hace falta agregar cargo dentro del COUNT(DISTINCT (...)).
 `.trim();
 
 export const CASOS_LIMITE = `

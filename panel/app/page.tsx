@@ -125,8 +125,10 @@ const EJEMPLOS = [
       "Varones, % Varones, Mujeres, % Mujeres, Total.",
   },
   {
-    etiqueta: "Listas en competencia",
-    pregunta: "¿Cuántas listas se presentaron en cada etapa entre 2011 y 2025?",
+    etiqueta: "Competencia en las PASO",
+    pregunta:
+      "¿Cuántas agrupaciones y listas se presentaron en las PASO entre 2011 y 2025, " +
+      "desagregado por cargo?",
   },
   {
     etiqueta: "Candidatos con más postulaciones",
