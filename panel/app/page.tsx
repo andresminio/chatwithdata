@@ -2025,10 +2025,10 @@ export default function Home() {
               <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />
             </svg>
           </div>
-          <h2>¿Primera vez por acá?</h2>
+          <h2>¿Es tu primera vez por acá?</h2>
           <p>
-            Te mostramos en pocos pasos cómo hacer preguntas, interpretar las respuestas y sacarle el
-            máximo beneficio al asistente. Tarda menos de un minuto.
+            Explora cómo hacer preguntas, interpretar las respuestas y sacarle el máximo provecho al
+            asistente. Te mostramos cómo empezar, en menos de un minuto.
           </p>
           <div className="tour-bienvenida-botones">
             <button type="button" className="tour-btn-ahora-no" onClick={cerrarTourDelTodo}>
