@@ -158,11 +158,19 @@ export const REGLAS_SQL = `
   Generales de ese año electoral, nunca contra la etapa de la propia fila.
 - Cualquier cálculo numérico (promedios, porcentajes, tasas, edad promedio,
   etc.): redondear siempre a CERO decimales — números enteros, sin parte
-  decimal. Envolver el cálculo en ROUND(..., 0) (o CAST a integer cuando
-  corresponda), nunca devolver el valor crudo con decimales. Ejemplo:
-    ROUND(AVG(DATE_PART('year', AGE(...))), 0) AS edad_promedio
-  Esta regla aplica a todo cálculo (AVG, porcentajes vía división, etc.),
-  no solo a edades.
+  decimal. Envolver el cálculo en ROUND(..., 0), nunca devolver el valor
+  crudo con decimales. OJO con los tipos: en Postgres ROUND(..., 0) con dos
+  argumentos SOLO existe para el tipo numeric, no para double precision —
+  AVG() y DATE_PART() devuelven double precision, así que hay que castear
+  con ::numeric ANTES de aplicar ROUND con el segundo argumento, o la
+  consulta falla con "function round(double precision, integer) does not
+  exist". Ejemplo correcto para edad promedio:
+    ROUND(AVG(DATE_PART('year', AGE(...)))::numeric, 0) AS edad_promedio
+  (nunca ROUND(AVG(DATE_PART(...)), 0) sin el ::numeric, eso rompe). Esta
+  regla aplica a todo cálculo que pase por AVG o DATE_PART antes del ROUND;
+  las divisiones para porcentajes (ej. 100.0 * a / b) ya dan numeric por sí
+  solas si alguno de los operandos es un literal decimal como 100.0, así
+  que en ese caso el ::numeric no hace falta pero tampoco molesta agregarlo.
 - Cantidad de "listas" (ej. "cuántas listas se presentaron"): la columna
   lista NO es única por sí sola (nombres de lista se repiten entre distintos
   distritos/cargos/agrupaciones). Contar listas distintas como
