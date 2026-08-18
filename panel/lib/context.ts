@@ -86,6 +86,17 @@ export const REGLAS_SQL = `
   Esta regla de columnas fijas NO aplica al modo Totales (agregaciones con
   COUNT/GROUP BY): ahí las columnas del SELECT dependen de por qué se pide
   desglosar.
+- Modo Totales (agregaciones con COUNT/GROUP BY): NUNCA devolver un único
+  número consolidado que sume todo. El GROUP BY siempre tiene que incluir
+  como mínimo eleccion y etapa (además de cualquier otra dimensión que la
+  pregunta pida, como genero, cargo, distrito, etc.), aunque la pregunta no
+  lo pida explícitamente — el resultado siempre va desagregado por año
+  electoral y por etapa. En particular, PASO y Generales de un mismo año
+  NUNCA se colapsan en un solo total: son filas separadas en el resultado.
+  Única excepción: si la pregunta filtra explícitamente a un único año y una
+  única etapa puntual (ej. "candidatos de Generales 2025"), ese filtro ya
+  deja un solo grupo posible y no hace falta agregar eleccion/etapa al
+  GROUP BY porque no aportan desglose.
 - Edad de un candidato (ej. "edad promedio", "edad al momento de la
   elección"): son AÑOS CUMPLIDOS a la fecha de la elección GENERAL de ese
   año electoral — NUNCA a fecha_eleccion de la fila (que puede ser la fecha
