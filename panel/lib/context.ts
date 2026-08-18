@@ -262,8 +262,19 @@ export const REGLAS_SQL = `
     WHERE eleccion = 2025 AND cargo = 'PRESIDENTE Y VICE' AND subcategoria = 'PRESIDENTE'
     GROUP BY distrito
 
-    ORDER BY cargo, distrito
-  En este SELECT en particular, la columna cargo va como literal
+    ORDER BY
+      CASE cargo
+        WHEN 'PRESIDENTE' THEN 1
+        WHEN 'SENADORES NACIONALES' THEN 2
+        WHEN 'DIPUTADOS NACIONALES' THEN 3
+        WHEN 'PARLAMENTARIOS DEL MERCOSUR' THEN 4
+      END,
+      distrito
+  El ORDER BY NO es alfabético: va siempre en este orden fijo de jerarquía
+  institucional — Presidente, Senadores, Diputados, Parlamentarios del
+  Mercosur (los que no apliquen a la elección puntual simplemente no
+  generan filas, no rompen el orden de los demás). En este SELECT en
+  particular, la columna cargo va como literal
   'PRESIDENTE' (no el valor crudo 'PRESIDENTE Y VICE' de la tabla): al
   lado de un número de cantidad, "PRESIDENTE Y VICE: 1" se lee como si
   fuera una sola persona cuando en realidad es una fórmula completa
