@@ -80,19 +80,40 @@ export const REGLAS_SQL = `
   COUNT/GROUP BY): ahí las columnas del SELECT dependen de por qué se pide
   desglosar.
 - Edad de un candidato (ej. "edad promedio", "edad al momento de la
-  elección"): SIEMPRE calcularla como la edad a la fecha_eleccion de esa
-  fila, NUNCA a la fecha actual. En Postgres:
-    DATE_PART('year', AGE(fecha_eleccion, fecha_nacimiento))
-  Una misma persona tiene edades distintas en cada elección en la que se
-  postuló — no calcular una única edad "actual" por persona.
+  elección"): son AÑOS CUMPLIDOS a la fecha de la elección GENERAL de ese
+  año electoral — NUNCA a fecha_eleccion de la fila (que puede ser la fecha
+  de la PASO o de la Segunda vuelta, no la de Generales) ni a la fecha
+  actual. Una misma persona tiene edades distintas en cada elección en la
+  que se postuló. Usar esta fecha fija según el año de la columna eleccion
+  (no hay otras fechas de Generales fuera de esta lista):
+    2011 → 2011-10-23   2019 → 2019-10-27
+    2013 → 2013-10-27   2021 → 2021-11-14
+    2015 → 2015-10-25   2023 → 2023-10-22
+    2017 → 2017-10-22   2025 → 2025-10-26
+  En Postgres, por ejemplo con CASE:
+    DATE_PART('year', AGE(
+      CASE eleccion
+        WHEN 2011 THEN DATE '2011-10-23' WHEN 2019 THEN DATE '2019-10-27'
+        WHEN 2013 THEN DATE '2013-10-27' WHEN 2021 THEN DATE '2021-11-14'
+        WHEN 2015 THEN DATE '2015-10-25' WHEN 2023 THEN DATE '2023-10-22'
+        WHEN 2017 THEN DATE '2017-10-22' WHEN 2025 THEN DATE '2025-10-26'
+      END,
+      fecha_nacimiento
+    ))
+  Esta regla aplica sin importar la etapa de la fila (PASO, Generales o
+  Segunda vuelta): la edad siempre se referencia contra la fecha de
+  Generales de ese año electoral, nunca contra la etapa de la propia fila.
 - Cantidad de "listas" (ej. "cuántas listas se presentaron"): la columna
   lista NO es única por sí sola (nombres de lista se repiten entre distintos
-  distritos/agrupaciones/años). Contar como
-    COUNT(DISTINCT (eleccion, distrito, agrupacion, lista))
+  distritos/cargos/agrupaciones). Contar listas distintas como
+    COUNT(DISTINCT (distrito, cargo, codigo_agrupacion, lista))
   o el equivalente agrupando por esas cuatro columnas, nunca
-  COUNT(DISTINCT lista) a secas. Tener en cuenta que lista es nula en
-  candidaturas de cargos sin listas internas (ver columna lista en el
-  esquema): esas filas no deberían sumar a un conteo de listas.
+  COUNT(DISTINCT lista) a secas ni usando agrupacion (texto) en vez de
+  codigo_agrupacion. Si la pregunta pide el desglose por año y/o etapa,
+  eleccion/etapa van en el GROUP BY de la consulta (el conteo de listas
+  distintas queda naturalmente acotado a cada grupo). Tener en cuenta que
+  lista es nula en candidaturas de cargos sin listas internas (ver columna
+  lista en el esquema): esas filas no deberían sumar a un conteo de listas.
 `.trim();
 
 export const CASOS_LIMITE = `

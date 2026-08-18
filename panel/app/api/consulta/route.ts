@@ -225,6 +225,14 @@ export async function POST(req: NextRequest) {
         "en vez de asumir que no hay datos. No inventes cifras que no estén en las filas. " +
         "El campo genero vale 'F' o 'M': en la prosa escribí siempre 'Femenino' o " +
         "'Masculino', nunca 'Género F', 'Género M' ni combinaciones como 'F (Femenino)'. " +
+        "Si la respuesta menciona una edad (promedio, mínima, máxima, o de una persona " +
+        "puntual), aclará siempre que es la edad al momento de la elección general de ese " +
+        "año — por ejemplo 'edad promedio al momento de la elección general de 2025: 45 " +
+        "años' — nunca la presentes como una edad actual o sin esa aclaración, incluso si " +
+        "la pregunta original no lo pidió explícitamente. Si la consulta abarca más de un " +
+        "año electoral, aclaralo una sola vez de forma general (ej. 'las edades están " +
+        "calculadas al momento de la elección general de cada año') en vez de repetirlo en " +
+        "cada cifra. " +
         "Para resaltar una cifra o categoría clave usá **negrita** (con asteriscos dobles), " +
         "sin abusar. Si el desglose tiene entre 3 y 5 categorías, presentalo como una lista " +
         "con cada ítem en una línea nueva que empiece con '- '; en cada ítem poné en negrita " +
