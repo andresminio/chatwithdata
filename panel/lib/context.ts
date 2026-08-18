@@ -257,12 +257,21 @@ export const REGLAS_SQL = `
 
     UNION ALL
 
-    SELECT cargo, distrito, 1 AS cantidad
+    SELECT 'PRESIDENTE' AS cargo, distrito, 1 AS cantidad
     FROM v_candidaturas
     WHERE eleccion = 2025 AND cargo = 'PRESIDENTE Y VICE' AND subcategoria = 'PRESIDENTE'
-    GROUP BY cargo, distrito
+    GROUP BY distrito
 
     ORDER BY cargo, distrito
+  En este SELECT en particular, la columna cargo va como literal
+  'PRESIDENTE' (no el valor crudo 'PRESIDENTE Y VICE' de la tabla): al
+  lado de un número de cantidad, "PRESIDENTE Y VICE: 1" se lee como si
+  fuera una sola persona cuando en realidad es una fórmula completa
+  (presidente + vice electos juntos, un solo cargo/línea). Esta sustitución
+  de etiqueta aplica SOLO en este tipo de resultado (cargo junto a un
+  conteo numérico); en Modo Listado o cualquier consulta que muestre la
+  columna cargo sin acompañarla de un conteo, usar siempre el valor real
+  'PRESIDENTE Y VICE' de la tabla, sin modificarlo.
 `.trim();
 
 export const CASOS_LIMITE = `
