@@ -237,31 +237,39 @@ export const REGLAS_SQL = `
   para Diputados ni Parlasur. Este total NUNCA puede superar 3 (son las
   únicas bancas de Senado que se renuevan por distrito en una elección):
   envolver el +1 en LEAST(..., 3) como resguardo, por si algún distrito
-  tuviera datos atípicos que hicieran superar ese tope. Ejemplo completo
-  (reemplazar el año del WHERE por el que pida la pregunta; se puede
-  omitir el tercer SELECT si la pregunta ya filtró a un año sin elección
-  presidencial, ver CASOS_LIMITE):
-    SELECT cargo, distrito,
-      COUNT(DISTINCT posicion) FILTER (WHERE subcategoria = 'TITULARES') AS cantidad
-    FROM v_candidaturas
-    WHERE eleccion = 2025 AND cargo IN ('DIPUTADOS NACIONALES', 'PARLAMENTARIOS DEL MERCOSUR')
-    GROUP BY cargo, distrito
+  tuviera datos atípicos que hicieran superar ese tope.
+  OJO con Postgres: un ORDER BY que use una expresión (como un CASE) NO se
+  puede poner directamente sobre un UNION/UNION ALL — Postgres tira el
+  error "invalid UNION/INTERSECT/EXCEPT ORDER BY clause" porque ahí el
+  ORDER BY solo admite nombres de columna simples o posición ordinal.
+  Siempre que el ORDER BY de un UNION ALL necesite algo más que un nombre
+  de columna (como el orden fijo de cargos de acá), hay que envolver todo
+  el UNION ALL en una subconsulta y aplicar el ORDER BY afuera, en un
+  SELECT normal. Ejemplo completo (reemplazar el año del WHERE por el que
+  pida la pregunta; se puede omitir el tercer SELECT si la pregunta ya
+  filtró a un año sin elección presidencial, ver CASOS_LIMITE):
+    SELECT * FROM (
+      SELECT cargo, distrito,
+        COUNT(DISTINCT posicion) FILTER (WHERE subcategoria = 'TITULARES') AS cantidad
+      FROM v_candidaturas
+      WHERE eleccion = 2025 AND cargo IN ('DIPUTADOS NACIONALES', 'PARLAMENTARIOS DEL MERCOSUR')
+      GROUP BY cargo, distrito
 
-    UNION ALL
+      UNION ALL
 
-    SELECT cargo, distrito,
-      LEAST(COUNT(DISTINCT posicion) FILTER (WHERE subcategoria = 'TITULARES') + 1, 3) AS cantidad
-    FROM v_candidaturas
-    WHERE eleccion = 2025 AND cargo = 'SENADORES NACIONALES'
-    GROUP BY cargo, distrito
+      SELECT cargo, distrito,
+        LEAST(COUNT(DISTINCT posicion) FILTER (WHERE subcategoria = 'TITULARES') + 1, 3) AS cantidad
+      FROM v_candidaturas
+      WHERE eleccion = 2025 AND cargo = 'SENADORES NACIONALES'
+      GROUP BY cargo, distrito
 
-    UNION ALL
+      UNION ALL
 
-    SELECT 'PRESIDENTE' AS cargo, distrito, 1 AS cantidad
-    FROM v_candidaturas
-    WHERE eleccion = 2025 AND cargo = 'PRESIDENTE Y VICE' AND subcategoria = 'PRESIDENTE'
-    GROUP BY distrito
-
+      SELECT 'PRESIDENTE' AS cargo, distrito, 1 AS cantidad
+      FROM v_candidaturas
+      WHERE eleccion = 2025 AND cargo = 'PRESIDENTE Y VICE' AND subcategoria = 'PRESIDENTE'
+      GROUP BY distrito
+    ) AS cargos_elegidos
     ORDER BY
       CASE cargo
         WHEN 'PRESIDENTE' THEN 1
