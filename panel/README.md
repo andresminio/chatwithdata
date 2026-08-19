@@ -1,7 +1,7 @@
-# Panel — chat sobre candidaturas (piloto interno)
+# Panel — chat sobre candidaturas (en producción, en prueba)
 
 Implementa el recorrido de una pregunta descrito en `PROYECTO-chat-with-data.md`
-(4.3), con Gemini Flash como modelo vía Vercel AI SDK.
+(4.3), con Gemini como modelo vía Vercel AI SDK.
 
 ## Arrancar
 
@@ -23,96 +23,87 @@ Abrir `http://localhost:3000`.
   variante "Lite" a propósito: los Flash completos (3.6, 3.5, 2.5, 3)
   comparten el mismo límite gratuito de 5 RPM / 20 RPD, que dos llamadas por
   pregunta agotan en minutos; los "Flash Lite" de la línea 3.x dan 15 RPM /
-  500 RPD. Si el piloto pasa a un plan pago, tiene sentido volver a un Flash
-  completo por calidad de redacción — ver "Pendiente" más abajo.
+  500 RPD. Pasar a un modelo de mayor poder de razonamiento (con plan pago)
+  es parte del roadmap — ver "Pendiente" más abajo y la Etapa 4 de
+  `PROYECTO-chat-with-data.md`.
 
 ## Estructura
 
 | Archivo | Qué hace |
 |---|---|
 | `lib/context.ts` | Esquema de `v_candidaturas`, reglas de SQL, casos límite y diccionario de términos — se inyecta como contexto del modelo en cada llamada |
-| `lib/sql-guard.ts` | Valida el SQL que devuelve el modelo antes de ejecutarlo: solo SELECT, solo `v_candidaturas`, sin DDL/DML, fuerza LIMIT |
+| `lib/sql-guard.ts` | Valida el SQL que devuelve el modelo antes de ejecutarlo: solo SELECT, solo `v_candidaturas`, sin DDL/DML, fuerza LIMIT. Es la solución definitiva, no un reemplazo temporal de `sqlglot` (que no corre en el runtime de Node/Vercel) |
 | `lib/db.ts` | Ejecuta el SELECT validado en una transacción de solo lectura contra Postgres, con timeout |
-| `app/api/consulta/route.ts` | Endpoint `POST /api/consulta`: pregunta → SQL (Gemini) → validación → ejecución → prosa (Gemini) |
-| `app/page.tsx` | UI mínima: input de pregunta, respuesta, SQL visible, tabla de resultados |
+| `app/api/consulta/route.ts` | Endpoint `POST /api/consulta`: pregunta → SQL (Gemini) → validación → ejecución → prosa (Gemini). Registra cada paso en `consultas_log` |
+| `app/api/reportar/route.ts` | Endpoint para marcar una respuesta puntual como reportada por el usuario |
+| `app/page.tsx` | UI: input de pregunta (con dictado por voz), chips de filtro (Totales/Listado, distrito, género, cargo, etapa, año), tabla de resultados con descarga a Excel, SQL visible, recorrido guiado de onboarding (tour de pasos) y disclaimer de contenido generado por IA |
 
-## Pendiente para pasar de piloto interno a Etapa 2 cerrada
+## Pendiente
 
-Según la sección 7 del documento del proyecto, esto es un prototipo funcional
-sin banco de evaluación todavía. Falta, en orden de prioridad:
+Según `PROYECTO-chat-with-data.md` (sección 7, Etapas 4 y 5), lo que sigue no
+es "cerrar el piloto" — ya está en producción — sino estos frentes:
 
-0. **Pasar a un plan de Gemini con cuota paga.** El plan gratuito de los
-   Flash "completos" (3.6, 3.5, 2.5, 3) limita a 5 solicitudes/minuto y 20
-   solicitudes/día, y cada pregunta dispara dos llamadas al modelo
-   (traducción a SQL + redacción) — se agota en minutos. Como paso
-   intermedio, el default pasó a `gemini-3.5-flash-lite` (15 RPM / 500 RPD
-   en el free tier, ver "Variables de entorno" arriba), que alcanza para
-   demos con uso normal pero puede perder algo de precisión frente al Flash
-   completo — falta verificar eso con el banco de evaluación (punto 1). El
-   código también distingue el error de cuota de un error real (ver
-   "Mensajes de la interfaz" abajo) y ofrece un botón "Reintentar", pero eso
-   es un parche de UX, no la solución de fondo.
-1. Banco de evaluación (6.4 / etapa 1) — sin esto no hay forma de medir si
-   un cambio de prompt mejora o empeora las respuestas.
-2. Ejemplos resueltos (pregunta–SQL) en `lib/context.ts`, para los patrones
-   típicos: filtro temporal, comparación entre elecciones, agregación por
-   distrito, conteo por género.
-3. Caché de preguntas repetidas (8 del documento) — hoy cada pregunta
-   dispara dos llamadas al modelo, sin excepción. Además de latencia, esto
-   es lo que agota la cuota gratuita al doble de velocidad (punto 0).
-4. Rol de Postgres de solo lectura dedicado, en vez de las credenciales
+1. **Caché de preguntas repetidas.** No existe todavía: cada pregunta dispara
+   dos llamadas al modelo (traducción a SQL + redacción), sin excepción. Es
+   la prioridad de escalabilidad más alta, tanto por costo como porque agota
+   la cuota gratuita del modelo al doble de velocidad.
+2. **Anti-abuso.** No hay Turnstile ni rate limiting propio; el único freno
+   hoy es la cuota del proveedor del modelo, que no distingue tráfico
+   legítimo de abuso.
+3. **Modelo de mayor poder de razonamiento.** Hoy corre `gemini-3.5-flash-lite`
+   por límite de cuota del free tier, no por elección de calidad. Requiere
+   pasar a un plan pago.
+4. **Rol de Postgres de solo lectura dedicado**, en vez de las credenciales
    completas del session pooler.
-5. Reemplazar el validador de SQL basado en reglas (`sql-guard.ts`) por un
-   parser real si aparecen falsos negativos — el documento preveía
-   `sqlglot`, que no corre en el runtime de Node/Vercel.
+5. **Ampliación de alcance** (Etapa 5, más grande): sumar candidaturas desde
+   1983 y vincular con la planilla de participación de agrupaciones políticas.
+
+Lo que **no** está en este roadmap, aunque lo previó una versión anterior del
+proyecto: banco de evaluación formal y ejemplos resueltos (pregunta–SQL) en
+el prompt. Se decidió saltearlos a propósito para llegar antes al resultado
+funcional, y no se van a retomar salvo que se pida explícitamente.
 
 ## Mensajes de la interfaz
 
-Catálogo de todos los textos que puede ver el usuario, para referencia al
-presentar el prototipo. Los mensajes de error "fijos" son casos técnicos que
-no debería ver un usuario en uso normal.
+Catálogo no exhaustivo de los textos fijos más relevantes — para el texto
+exacto de los chips de filtro, los pasos del tour de onboarding y los
+ejemplos de pregunta, `app/page.tsx` es la fuente de verdad (cambian con
+frecuencia; catalogarlos acá se desactualiza rápido).
 
-### Textos fijos de la interfaz (siempre visibles)
+### Textos fijos principales
 
 | Elemento | Texto |
 |---|---|
 | Badge | "Asistente IA" |
 | Título | "Chateá con los datos electorales" |
-| Descripción | "Accedé a información sobre precandidaturas y candidaturas electorales de 2011 a 2025 mediante lenguaje natural." |
-| Placeholder del buscador | "¿Cuántas mujeres encabezaron listas de diputados en Córdoba en 2025?" |
-| Botón | "Preguntar" (y "Consultando..." mientras espera respuesta) |
-| Etiquetas de filtro | Candidaturas \| Totales \| Por distrito \| Por género \| PASO \| GENERALES \| 2025 |
+| Descripción | "Accedé a información sobre precandidaturas y candidaturas electorales nacionales de 2011 a 2025 mediante lenguaje natural." |
+| Placeholder del buscador | "¿Qué te gustaría saber sobre las candidaturas?" |
+| Botón | "Preguntar" — mientras espera respuesta, el botón/input se ocultan y aparece un overlay animado con el texto "Pensando" |
+| Botón de voz | "Preguntar por voz" / "Detener dictado" mientras escucha |
 | Título del desplegable SQL | "Consulta realizada por la IA" |
+| Botón de descarga | "Descargar Excel" (genera un `.xlsx` real, no CSV) |
+| Disclaimer bajo cada respuesta | "Contenido generado con inteligencia artificial. Verificá la información importante antes de utilizarla." |
+| Recorrido guiado | Tour de onboarding de varios pasos con spotlight sobre la pantalla real, para primera visita |
 
 ### Mensajes generados por la IA (varían según la consulta)
 
 - **Respuesta normal**: la redacta la IA en base a las filas devueltas.
 - **Pregunta fuera de alcance** (pide resultados electorales, votos, quién
   ganó, etc.): la IA redacta la explicación del límite; si no lo genera, cae
-  en el texto por defecto: "Esta consulta no puede responderse con la
-  información disponible. Los datos corresponden a candidaturas y
-  precandidaturas electorales."
+  en un texto por defecto fijo en el endpoint.
 
 ### Mensajes de error fijos (casos técnicos)
 
+Body inválido, falla de traducción a SQL, SQL rechazado por el validador y
+falla de ejecución contra la base **comparten hoy el mismo mensaje genérico**
+("Ups, no pudimos procesar esta consulta. Probá reformularla."), cada uno con
+su propio código HTTP y un `logId` para poder correlacionar el caso en
+`consultas_log` si hace falta investigar.
+
 | Escenario | Mensaje |
 |---|---|
-| Body inválido | "No pudimos procesar la consulta. Intentá nuevamente." |
+| Body inválido / falla traducción a SQL / SQL rechazado / falla ejecución | "Ups, no pudimos procesar esta consulta. Probá reformularla." (con `logId`) |
 | Sin pregunta | "Escribí una pregunta para poder ayudarte." |
-| Falla la traducción a SQL | "No pudimos procesar tu consulta. Intentá reformularla o probar con otra pregunta." |
-| Se agotó la cuota gratuita de la IA (20 solicitudes/min) | "Estamos recibiendo muchas consultas en este momento (límite del plan gratuito de la IA). Probá de nuevo en unos [N] segundos." — con botón "Reintentar" |
-| El modelo no devolvió SQL | "No pudimos procesar tu consulta. Intentá nuevamente." |
-| SQL rechazado por el validador de seguridad | "No pudimos procesar esta consulta. Intentá formularla de otra manera." |
-| Falla la ejecución contra la base | "No pudimos obtener la información en este momento. Intentá nuevamente." |
+| Se agotó la cuota gratuita de la IA | "Estamos recibiendo muchas consultas en este momento (límite del plan gratuito de la IA). Probá de nuevo en unos [N] segundos / en un minuto." — con botón "Reintentar" |
 | Falla la redacción de la respuesta, pero sí hay datos | "Podés ver la información que buscabas a continuación." |
 | Falla la conexión desde el navegador (fetch) | "No pudimos conectarnos con el servicio. Verificá tu conexión e intentá nuevamente." |
-
-## Nota sobre esta entrega
-
-El código no se pudo compilar de punta a punta (`npm run build`) dentro del
-sandbox de esta sesión: la instalación de `node_modules` se truncó
-repetidamente por límites de red/tiempo del entorno, y algunos archivos
-quedaron con permisos que impidieron limpiarlos desde acá. Se revisó el
-código a mano (tipos, imports, sintaxis de Postgres) pero conviene correr
-`npm install && npm run build` en tu máquina antes de darlo por cerrado. Si
-`node_modules/` ya existe y da error de instalación, borrarlo primero.

@@ -1,7 +1,7 @@
 # Proyecto: Portal conversacional sobre datos electorales — UEEDA / CNE
 
 Documento de contexto. Refleja el estado real del proyecto, no el plan original.
-Última revisión: 6 de agosto de 2026.
+Última revisión: 19 de agosto de 2026.
 
 ---
 
@@ -23,17 +23,22 @@ nunca calcula ni recuerda datos.
 
 ## 2. Estado actual
 
-**Etapa: piloto.** Una fuente cargada, capa semántica construida y verificada.
-Falta la aplicación de chat.
+**En producción, en etapa de prueba.** El panel (`panel/`) está desplegado y
+funcionando contra datos reales. No se llegó a esta etapa por el camino
+original: se decidió saltear el banco de evaluación formal y los ejemplos
+resueltos de la Etapa 1 para llegar antes al resultado funcional (ver
+sección 7).
 
 | Pieza | Estado |
 |---|---|
-| Datos en Postgres | Hecho — 38.907 filas |
-| Capa semántica (`v_candidaturas`) | Hecha — 18 columnas tipadas + banderas de calidad |
-| Perfilado de calidad | Hecho — 10 tipos de anomalía identificados |
-| Banco de evaluación | Pendiente |
-| Aplicación de chat | Pendiente |
-| Participación de agrupaciones | Fuera del piloto |
+| Datos en Postgres | Hecho |
+| Capa semántica (`v_candidaturas`) | Hecha — tipada, con índices para los filtros más frecuentes |
+| Diccionario de términos | Hecho — `diccionario_terminos.md`, traducido a prompt en `panel/lib/context.ts` |
+| Banco de evaluación formal | No se hizo — se saltó a propósito para priorizar el resultado funcional |
+| Ejemplos resueltos (pregunta–SQL) en el prompt | No se hizo — mismo motivo |
+| Aplicación de chat | Hecha y en producción (`panel/`, Next.js) |
+| Participación de agrupaciones políticas | Fuera de alcance actual — ver sección 7 |
+| Candidaturas anteriores a 2011 | Fuera de alcance actual — ver sección 7 |
 
 ---
 
@@ -46,8 +51,8 @@ cada instancia electoral: PASO, generales y segunda vuelta. Por cargo, distrito,
 agrupación, nombre de lista, posición en la lista, carácter de titular o
 suplente, y género.
 
-Diecisiete instancias electorales en ocho años electorales. 38.907 candidaturas,
-23.251 personas distintas, 824 denominaciones de agrupación.
+*(El rango 2011–2025 es el alcance actual, no un límite del dominio: sumar
+candidaturas desde 1983 es parte del roadmap — ver sección 7.)*
 
 ### 3.2 Dimensiones
 
@@ -61,7 +66,7 @@ Diecisiete instancias electorales en ocho años electorales. 38.907 candidaturas
 
 - Quiénes se postularon, a qué cargo, por qué agrupación y en qué posición.
 - Paridad de género en las listas, por distrito, cargo y elección.
-- Trayectoria de una persona a lo largo de varias elecciones.
+- Trayectoria de una persona a lo largo de varias elecciones (por `id_candidato`).
 - Composición de una lista concreta.
 - Comparaciones entre elecciones, entre distritos y entre agrupaciones.
 - Agregados: cantidad de candidaturas por elección, por distrito, por cargo.
@@ -72,18 +77,19 @@ Diecisiete instancias electorales en ocho años electorales. 38.907 candidaturas
 obtuvo nadie, ni quién resultó electo. Tampoco tiene padrón, afiliaciones,
 autoridades de mesa, escrutinios ni financiamiento.
 
-Esto no es un detalle operativo: *"¿quién ganó en 2023?"* va a ser una de las
-preguntas más frecuentes del portal. El sistema debe reconocerla, explicar que
-trabaja sobre candidaturas y no sobre resultados, y derivar al recurso oficial
-correspondiente. Responder algo plausible ante una pregunta fuera de alcance es
-el peor modo de falla posible para un organismo electoral.
+Esto no es un detalle operativo: *"¿quién ganó en 2023?"* es una de las
+preguntas más frecuentes del portal. El sistema reconoce esa pregunta, explica
+que trabaja sobre candidaturas y no sobre resultados, y no inventa una
+respuesta. Responder algo plausible ante una pregunta fuera de alcance es el
+peor modo de falla posible para un organismo electoral.
 
-Tratar "no puedo responder eso" como una respuesta exitosa —y medirla como tal—
-es un requisito de diseño, no una limitación.
+Tratar "no puedo responder eso" como una respuesta exitosa —y no como una
+falla— sigue siendo un requisito de diseño.
 
 **Tampoco responde sobre partidos ni alianzas.** Qué partidos integraron cada
 alianza, qué partidos estaban vigentes en cada elección y quién superó las PASO
-son datos que viven en la planilla de participación, que está fuera del piloto.
+son datos que viven en la planilla de participación, que hoy está fuera de
+alcance. Vincular ambas fuentes es parte del roadmap (sección 7).
 
 ### 3.5 Casos límite que el portal debe reconocer
 
@@ -93,7 +99,7 @@ sería incorrecta; hay que explicar por qué no hay datos.
 - **No hubo PASO en 2025.** Ese año tiene solo generales.
 - **Parlamentarios del Mercosur solo existen en 2015 y 2023.**
 - **Presidente y Vice solo en 2011, 2015, 2019 y 2023.**
-- **Segunda vuelta solo en 2015 y 2023**, con 4 candidaturas cada una.
+- **Segunda vuelta solo en 2015 y 2023.**
 
 ---
 
@@ -103,10 +109,10 @@ sería incorrecta; hay que explicar por qué no hay datos.
 data/*.xlsx  (planillas UEEDA)
    ↓  cargar_postgres.py      lee celda por celda, todo como texto
 Postgres / Supabase  ·  tabla candidaturas       capa cruda
-   ↓  pg_02_vista.sql         tipado, nombres de dominio, banderas de calidad
+   ↓  pg_02...pg_08 (histórico) → hoy: pg_01_tabla.sql + pg_08_agregar_id_candidato.sql
 Postgres  ·  v_candidaturas (materializada)      capa semántica
    ↓
-Aplicación de chat  ──→  Portal público CNE
+panel/ (Next.js, Vercel)  ──→  Portal público
 ```
 
 ### 4.1 Por qué no hay BigQuery ni dbt
@@ -116,31 +122,31 @@ como capa de servicio. Se descartó, y conviene dejar escrito por qué:
 
 - **BigQuery** se justificaba por dos razones: ser la fuente única compartida con
   Looker Studio, y escalar a resultados por mesa. Ninguna aplica: no existe un
-  almacén institucional de la CNE al que conectarse, y el dominio actual son
-  38.907 filas, 5 MB. Postgres los resuelve en milisegundos.
+  almacén institucional de la CNE al que conectarse, y el volumen actual lo
+  resuelve Postgres en milisegundos.
 - **dbt** resuelve dependencias entre modelos encadenados. Con una sola tabla de
   origen y sin uniones que resolver, no hay dependencias. Recupera sentido cuando
-  se incorpore participación.
+  se incorpore participación (sección 7).
 
 Se llegó a cargar todo en BigQuery antes de tomar esta decisión. El costo fue una
 tarde; el camino queda hecho por si aparece un almacén institucional.
 
-### 4.2 Herramientas
+### 4.2 Herramientas (lo que realmente corre hoy)
 
-| Función | Herramienta | Por qué |
+| Función | Herramienta | Nota |
 |---|---|---|
-| Base de datos | **Supabase** (Postgres) | Milisegundos por consulta; Postgres estándar, portable |
-| Carga | **openpyxl + psycopg** | Lee el Excel sin destruir los datos; ver 5.1 |
-| Capa semántica | **Vista materializada** | Los datos son estáticos: se calcula una vez |
-| Aplicación | **Next.js** | Interfaz de chat, tabla de resultados, SQL visible |
-| Capa de modelo | **Vercel AI SDK** | Cambiar de proveedor de LLM es una variable de entorno |
-| Validación SQL | **sqlglot** | Verifica el SQL generado antes de ejecutarlo |
-| Hosting | **Vercel** | Free tier en prototipo |
-| Anti-abuso | **Cloudflare Turnstile** | Sin costo, sin fricción para el usuario |
+| Base de datos | **Supabase** (Postgres) | Conexión directa por el **session pooler** (puerto 5432), no el pooler transaccional ni la conexión directa IPv6 |
+| Carga | **openpyxl + psycopg** | Lee el Excel sin destruir los datos (ver 5.1) |
+| Capa semántica | **Vista materializada** (`v_candidaturas`) | Los datos son estáticos: se calcula una vez, se refresca con `REFRESH MATERIALIZED VIEW` |
+| Aplicación | **Next.js 15 (App Router)** | Interfaz de chat, tabla de resultados, SQL visible |
+| Capa de modelo | **Vercel AI SDK + Gemini** | Modelo detrás de la variable `GEMINI_MODEL`; hoy `gemini-3.5-flash-lite` por cuota de free tier, no por elección de calidad — ver sección 7, roadmap |
+| Validación de SQL | **`lib/sql-guard.ts`**, validador por reglas explícitas | El documento original preveía `sqlglot`; se descartó porque es una librería Python y no corre en el runtime de Node/Vercel. No es un parcho temporal: es la solución vigente |
+| Hosting | **Vercel** | En producción |
+| Anti-abuso | *(sin implementar)* | No hay Turnstile ni rate limiting propio todavía; el único control de tráfico hoy es el límite de cuota del propio proveedor del modelo. Ver sección 8 |
 
 Criterio de selección: **ningún componente obliga a reescribir para pasar a
 producción.** El único sin sustituto directo es el modelo, y por eso está detrás
-de una capa de abstracción.
+de una capa de abstracción (una variable de entorno).
 
 ### 4.3 Recorrido de una pregunta
 
@@ -154,47 +160,53 @@ Navegador                Servidor (Next.js en Vercel)              Servicios
 
 "¿cuántas mujeres
  encabezaron listas  ──→  1. recibe la pregunta
- en Córdoba 2023?"        2. busca en caché; si acierta, salta al 6
+ en Córdoba 2023?"
 
-                          3. encuadre: ¿está dentro del alcance?
-                             si no → respuesta explicativa, sin SQL
-
-                          4. arma el prompt:
+                          2. arma el prompt:
                              pregunta + esquema de v_candidaturas
-                             + diccionario + ejemplos    ──────────→  LLM
+                             + diccionario de términos    ────────→  LLM
                                                           ←──────────  devuelve
                                                                        SOLO texto SQL
 
-                          5. valida el SQL (sqlglot):
+                          3. valida el SQL (sql-guard.ts):
                              ¿es SELECT? ¿solo v_candidaturas?
                              ¿tiene LIMIT? → si no, rechaza
 
-                          6. EJECUTA el SQL          ───────────────→  Postgres
-                             (rol de solo lectura,                     (Supabase)
-                              timeout máximo)         ←───────────────  filas
+                          4. EJECUTA el SQL          ───────────────→  Postgres
+                             (transacción READ ONLY,                   (Supabase)
+                              statement_timeout)       ←───────────────  filas
 
-                          7. manda esas filas al LLM
+                          5. manda esas filas al LLM
                              para redactar             ──────────────→  LLM
                                                        ←──────────────  prosa
 
-  respuesta +         ←──  8. devuelve prosa + tabla + el SQL ejecutado
-  tabla + SQL
+  respuesta +         ←──  6. devuelve prosa + tabla + el SQL ejecutado
+  tabla + SQL              (y registra la consulta en consultas_log)
 ```
 
-**Dónde corre cada cosa.** Los pasos 1 a 8 son la aplicación Next.js, del lado
+**Dónde corre cada cosa.** Todos los pasos son la aplicación Next.js, del lado
 del servidor. El navegador solo muestra. El cálculo ocurre íntegramente en
-Postgres, en el paso 6.
+Postgres, en el paso 4.
 
 **El modelo se invoca dos veces y nunca calcula.** La primera vez recibe el
 esquema, no datos. La segunda recibe únicamente las filas que devolvió Postgres.
-Si el modelo inventa una cifra, se introduce en el paso 7 — y por eso la tabla
+Si el modelo inventa una cifra, se introduce en el paso 5 — y por eso la tabla
 va visible junto a la respuesta: el desvío queda a la vista.
 
 **El navegador nunca habla con Postgres.** La cadena de conexión vive solo en el
-servidor. Si el navegador consultara directo, las credenciales quedarían
-expuestas en el código de la página.
+servidor (`panel/lib/db.ts`). Si el navegador consultara directo, las
+credenciales quedarían expuestas en el código de la página.
 
-**El paso 7 envía datos al proveedor del modelo** — las filas del resultado, no
+**No hay rol de Postgres de solo lectura dedicado.** La app usa las
+credenciales completas del `postgres` del session pooler; la única defensa hoy
+es `sql-guard.ts` (paso 3) más `BEGIN TRANSACTION READ ONLY` a nivel de sesión
+SQL (paso 4). Es una brecha conocida, no un olvido — ver sección 9.
+
+**Cada pregunta queda registrada** en `consultas_log`: la pregunta, el SQL
+generado, qué pasó (ok / fuera de alcance / algún tipo de error) y cuántas
+filas devolvió. Es anónimo por diseño — no hay login en el panel.
+
+**El paso 5 envía datos al proveedor del modelo** — las filas del resultado, no
 la base. Con datos públicos no representa un problema, pero es el punto a
 revisar si alguna vez entra información que no lo sea.
 
@@ -203,18 +215,33 @@ revisar si alguna vez entra información que no lo sea.
 Es el activo técnico central del proyecto y lo que determina la tasa de acierto.
 
 **`v_candidaturas`** — el modelo nunca ve la tabla cruda. Ve una vista
-materializada de 18 columnas, tipadas y con nombres en lenguaje del dominio. La
+materializada, tipada y con nombres en lenguaje del dominio, más un
+`id_candidato` estable para poder seguir a una persona entre elecciones sin
+depender de apellido + nombres (que se repite y varía en escritura). La
 traducción a SQL falla sobre todo al resolver uniones entre tablas; acá no hay
 ninguna que resolver.
 
-**Diccionario de términos** *(pendiente)* — sinónimos, siglas y nombres
-coloquiales: "CABA" y "Capital Federal", "diputados" y "Diputados Nacionales",
-"Parlasur", "las PASO", "LLA". En la práctica es lo que más mueve la tasa de
-acierto, y lo más fácil de subestimar.
+**Diccionario de términos** (`diccionario_terminos.md`) — sinónimos, siglas y
+nombres coloquiales: "CABA" y "Capital Federal", "diputados" y "Diputados
+Nacionales", "Parlasur", "las PASO", "LLA". Se armó a partir de los valores
+reales del Excel de origen, no de supuestos. Se inyecta en el prompt vía
+`panel/lib/context.ts` — si el diccionario cambia, hay que actualizar ese
+archivo a mano, no está automatizado.
 
-**Ejemplos resueltos** *(pendiente)* — pares pregunta–SQL correcta incluidos en
-el contexto, cubriendo los patrones típicos: filtro temporal, comparación entre
-elecciones, agregación por distrito, conteo por género.
+**Regla de dominio: nunca fusionar agrupaciones por nombre.** Cada grafía de
+`agrupacion` (p. ej. las más de 30 variantes de "Cambiemos" o de "Frente de
+Izquierda") es una entidad legalmente distinta según distrito y elección.
+Ningún término del diccionario mapea una sigla o nombre coloquial a un valor
+exacto de `agrupacion`: siempre se traduce a un patrón `ILIKE '%...%'`, y el
+resultado siempre muestra la columna `agrupacion` real para que un match de
+más quede a la vista.
+
+**Ejemplos resueltos (pregunta–SQL) en el prompt** — no se implementaron. Se
+había previsto como parte de la Etapa 1 para cubrir patrones típicos (filtro
+temporal, comparación entre elecciones, agregación por distrito, conteo por
+género), pero se saltearon a propósito para llegar antes al prototipo
+funcional. No están en el roadmap actual salvo que la calidad de traducción a
+SQL lo justifique.
 
 ---
 
@@ -223,52 +250,22 @@ elecciones, agregación por distrito, conteo por género.
 ### 5.1 Cómo se leen — y por qué importa
 
 `cargar_postgres.py` lee el Excel **celda por celda con openpyxl**, no con
-`pandas.read_excel`. La razón es concreta: `Codigo AP` vale `"047"`, con ceros a
-la izquierda. Pandas lo convierte a `47`. Como ese es el campo de cruce con
-participación, leerlo mal rompe el vínculo en silencio, sin ningún error.
+`pandas.read_excel`. La razón es concreta: `codigo_ap` puede valer `"047"`, con
+ceros a la izquierda. Pandas lo convierte a `47`. Como ese es el campo de cruce
+con participación, leerlo mal rompe el vínculo en silencio, sin ningún error.
 
 Por el mismo motivo la capa cruda es **todo texto**. El tipado vive en la vista,
 donde se puede leer y corregir, no escondido en el script de carga.
 
-### 5.2 Calidad: qué se encontró
+### 5.2 Calidad
 
-**38.401 de 38.907 filas no tienen ninguna anomalía: 98,7%.**
+La fuente se corrigió en origen y se volvió a cargar completa: no quedan
+anomalías de calidad conocidas pendientes de tratamiento (no hay `codigo_ap`
+faltante, ni colisiones de posición, ni columna de banderas en la vista). Si
+aparece un problema de calidad nuevo, se documenta acá cuando se detecte —
+hoy no hay ninguno abierto.
 
-Las filas problemáticas **no se eliminan, se marcan** en la columna `anomalias`.
-Un candidato que existió sigue existiendo aunque su posición esté mal cargada.
-
-| Bandera | Filas | Qué es |
-|---|---|---|
-| `genero_inconsistente` | 108 | 29 DNI con género distinto según la elección. Afecta cualquier cálculo de paridad agrupado por persona |
-| `lista_incompleta` | 125 | 36 listas cuya numeración no arranca en 1 o tiene huecos |
-| `agrupacion_texto_roto` | 76 | `Unión Para Vivir Mejor (503` truncada; `Frente De Izquierda... ()` con paréntesis vacío |
-| `sin_posicion` | 75 | 64 son de PASO 2015 y explican falsos duplicados |
-| `identificador_invalido` | 63 | DNI, id_candidato o apellido faltante. Incluye 6 DNI de un solo dígito |
-| `dni_en_varias_agrupaciones` | 43 | 20 personas en más de una agrupación en la misma instancia |
-| `posicion_duplicada` | 30 | 15 grupos con dos personas en la misma posición |
-| `dni_repetido_en_lista` | 22 | La misma persona dos veces en la misma lista |
-| `sin_codigo_agrupacion` | 21 | Huecos aislados fuera de 2021 |
-| `edad_imposible` | 1 | Menor de 18 al momento de la elección |
-
-Consultar solo filas limpias: `WHERE cardinality(anomalias) = 0`.
-
-### 5.3 Problemas estructurales, no marcables
-
-**`codigo_ap` falta en el 100% de 2021.** No es un problema de calidad disperso:
-es un año cargado con otro criterio. Cuando se incorpore participación, 2021 no
-va a cruzar por código. Requiere decisión de dominio.
-
-**Las 15 colisiones de posición no tienen solución en esta tabla.** Son listas
-internas paralelas cargadas con el mismo `nombre_lista`. Se verificó que ni
-`codigo_ap` ni `candidatura` las separan —`candidatura` resultó ser
-`Nombres + Apellido` concatenado, no un identificador—. Requiere corrección en
-origen.
-
-**La capitalización de `ap` sigue al año, no al distrito.** 2013, 2015 y 2017
-están enteros en formato título; el resto en mayúsculas. Como cada distrito
-oficializa sus propias denominaciones, no se unifica: se deja como está.
-
-### 5.4 Fuente descartada
+### 5.3 Fuente descartada
 
 `Vigentes elecciones.xlsx` era **byte a byte idéntico** a la planilla de
 participación (mismo MD5). La vigencia de cada partido al momento de la elección
@@ -288,7 +285,8 @@ errores: se ve si falló la traducción o el dato.
 
 Un portal de la CNE va a recibir preguntas cargadas políticamente. El sistema
 responde con datos o no responde; nunca opina, califica ni proyecta. Es una
-restricción de diseño con verificación explícita en las pruebas.
+restricción de diseño, hoy sostenida por el prompt — sin verificación
+automatizada porque no hay banco de evaluación (ver 6.3).
 
 ### 6.3 Datos personales
 
@@ -296,64 +294,63 @@ restricción de diseño con verificación explícita en las pruebas.
 candidaturas son de publicación oficial. No hace falta anonimizar, truncar la
 fecha a año, ni separar esos datos con permisos restringidos.
 
-*(Este punto corrige una versión anterior del documento que exigía lo contrario
-y lo señalaba como bloqueante de la etapa 3.)*
+### 6.4 Banco de evaluación — no implementado
 
-### 6.4 Banco de evaluación
-
-Un conjunto de preguntas con respuesta verificada manualmente, que se ejecuta
-ante cada cambio de modelo, prompt o esquema. Debe cubrir:
-
-- Preguntas frecuentes esperadas.
-- Los casos límite de 3.5: PASO 2025, Parlasur, segunda vuelta.
-- Preguntas ambiguas que deben pedir precisión.
-- Preguntas fuera de alcance que deben ser rechazadas: resultados, partidos.
-- Preguntas cargadas políticamente que deben mantener neutralidad.
-
-Sin este banco no hay forma de saber si un cambio mejoró o empeoró el sistema.
-Es el artefacto más habitualmente omitido y el que más determina si el proyecto
-llega a producción.
+Se había previsto un conjunto de preguntas con respuesta verificada
+manualmente, para correr ante cada cambio de modelo, prompt o esquema y medir
+si un cambio mejora o empeora las respuestas. **Se decidió no construirlo**
+para llegar antes al prototipo funcional, y hoy no hay forma sistemática de
+medir el impacto de un cambio de modelo o prompt — se evalúa a mano, caso por
+caso. No está en el roadmap actual salvo que se retome explícitamente.
 
 ---
 
 ## 7. Etapas
 
 ### Etapa 0 — Datos ✔ cerrada
-Carga a Postgres, capa semántica, perfilado de calidad. Las banderas de la vista
-coinciden con el perfilado independiente en las 10 categorías.
+Carga a Postgres y capa semántica.
 
-### Etapa 1 — Capa semántica y evaluación ← acá estamos
-Diccionario de términos, ejemplos resueltos y primera versión del banco de
-evaluación.
+### Etapa 1 — Capa semántica ✔ parcialmente cerrada
+Diccionario de términos: hecho. Ejemplos resueltos y banco de evaluación
+formal: salteados a propósito, no forman parte del roadmap actual.
 
-*Cierra cuando:* existe un banco de al menos varias decenas de preguntas con
-respuesta verificada.
+### Etapa 2 — Prototipo funcional ✔ cerrada
+Aplicación de chat contra `v_candidaturas`, con validación de SQL, SQL visible
+y manejo de fuera de alcance.
 
-### Etapa 2 — Prototipo funcional
-Aplicación de chat contra `v_candidaturas`, con validación de SQL, SQL visible y
-manejo de fuera de alcance. Uso interno.
+### Etapa 3 — Producción, en prueba ← acá estamos
+El panel está desplegado y en uso con datos reales. Registro de todas las
+preguntas en `consultas_log`, que alimenta el diccionario y eventuales ajustes
+de prompt.
 
-*Cierra cuando:* supera el umbral de acierto definido sobre el banco.
+### Etapa 4 — Escalabilidad y mejora del modelo
+No se avanza en orden estricto; son frentes en paralelo:
 
-### Etapa 3 — Piloto institucional
-Presentación a autoridades y prueba con usuarios internos. Registro de todas las
-preguntas formuladas, que alimentan el diccionario y el banco.
+- **Escalabilidad de tráfico y costo** — caché de preguntas frecuentes (hoy
+  cada pregunta dispara dos llamadas al modelo, sin excepción — ver sección
+  8), anti-abuso (hoy no hay Turnstile ni rate limiting propio), rol de
+  Postgres de solo lectura dedicado.
+- **Modelo de mayor poder de razonamiento** — hoy corre `gemini-3.5-flash-lite`
+  por límite de cuota del free tier (5 RPM / 20 RPD de los Flash completos vs.
+  15 RPM / 500 RPD del Lite), no por elección de calidad. Pasar a un plan
+  pago habilita volver a un modelo más capaz para la traducción a SQL y la
+  redacción.
 
-*Cierra cuando:* hay aprobación institucional.
+### Etapa 5 — Ampliación de alcance
+Dos ejes:
 
-### Etapa 4 — Producción pública
-Integración al sitio de la CNE, protección anti-abuso, caché, monitoreo, límites
-de gasto y procedimiento de actualización documentado.
+- **Candidaturas desde 1983** — hoy el dominio arranca en 2011; extenderlo
+  hacia atrás hasta el regreso de la democracia.
+- **Participación de agrupaciones políticas** — vincular con la planilla de
+  participación (qué partidos integraron cada alianza, vigencia por elección),
+  hoy fuera de alcance. Requiere despivotear su formato ancho a formato largo
+  y resolver la relación alianza-partido. Es el punto donde dbt recupera
+  sentido (sección 4.1).
 
-### Etapa 5 — Ampliación
-Incorporación de participación de agrupaciones, y después resultados
-electorales. Participación requiere despivotear el formato ancho a formato
-largo, resolver la relación alianza-partido y el hueco de `codigo_ap` en 2021.
-Es el punto donde dbt recupera sentido.
-
-**Regla entre etapas:** no se avanza sin cerrar la anterior. Un chat sobre datos
-mal modelados produce respuestas incorrectas con apariencia de precisión, que es
-peor que no tener portal.
+**Regla entre etapas:** un chat sobre datos mal modelados produce respuestas
+incorrectas con apariencia de precisión, que es peor que no tener portal. Eso
+sigue rigiendo aunque el orden formal de etapas se haya salteado en la
+práctica.
 
 ---
 
@@ -361,24 +358,31 @@ peor que no tener portal.
 
 **Volumen.** El dominio actual cabe entero en memoria. Si se incorporan
 resultados por mesa —millones de registros—, ahí sí hay que revisar la
-arquitectura; hasta entonces, Postgres sobra.
+arquitectura; hasta entonces, Postgres sobra. Sumar candidaturas desde 1983
+(sección 7) no cambia esto: sigue siendo un volumen chico.
 
-**Tráfico.** Tres mecanismos, en orden de efectividad:
+**Tráfico.** Mecanismos, en orden de prioridad para la Etapa 4:
 
-1. **Caché.** En un portal temático las preguntas se repiten fuertemente. Una
-   tasa alta de aciertos reduce el costo por consulta casi a cero y es lo que
-   hace viable el tráfico público.
-2. **Vistas de resumen precalculadas** para los agregados más pedidos.
-3. **Límites por origen** y verificación anti-bot.
+1. **Caché de preguntas repetidas.** Todavía no existe: cada pregunta dispara
+   las dos llamadas al modelo (traducción a SQL + redacción) sin excepción.
+   En un portal temático las preguntas se repiten fuertemente, así que es el
+   mecanismo de mayor impacto tanto en costo como en la cuota gratuita del
+   modelo.
+2. **Anti-abuso.** No hay Turnstile ni límite por origen implementado; el
+   único freno hoy es la cuota del proveedor del modelo, que no distingue
+   tráfico legítimo de abuso.
+3. **Vistas de resumen precalculadas** para los agregados más pedidos —
+   evaluar si hace falta una vez que haya caché.
 
 El costo del modelo escala con las preguntas *distintas*, no con las visitas.
-Esa es la variable a monitorear.
+Esa es la variable a monitorear, y la razón por la que la caché es la
+prioridad 1 de la Etapa 4.
 
 **Modelo de lenguaje.** El proveedor está detrás de una capa de abstracción:
-cambiarlo es una variable de entorno. Habilita pasar de free tier a pago, cambiar
-a un modelo más capaz si la traducción no alcanza el umbral, o migrar a un modelo
-abierto autoalojado si aparece una exigencia de que los datos no salgan de la
-infraestructura del organismo.
+cambiarlo es una variable de entorno (`GEMINI_MODEL`). Habilita pasar de free
+tier a pago, cambiar a un modelo más capaz si la traducción no alcanza la
+calidad esperada, o migrar a un modelo abierto autoalojado si aparece una
+exigencia de que los datos no salgan de la infraestructura del organismo.
 
 **Institucional.** La restricción más probable no es técnica:
 
@@ -387,7 +391,7 @@ infraestructura del organismo.
 - *Independencia de personas.* La carga es un script versionado, no un
   procedimiento manual.
 - *Trazabilidad.* Se registra qué se preguntó, qué SQL se ejecutó y qué se
-  respondió.
+  respondió (`consultas_log`).
 
 ---
 
@@ -395,24 +399,25 @@ infraestructura del organismo.
 
 | Riesgo | Impacto | Mitigación |
 |---|---|---|
-| Respuesta incorrecta con apariencia de precisión | Alto — institucional | SQL visible, banco de evaluación, rechazo explícito ante duda |
-| Preguntas fuera de alcance respondidas igual | Alto | Encuadre previo, medición del rechazo como métrica |
-| Uso político de una respuesta | Alto | Neutralidad verificada, trazabilidad completa |
-| Casos límite devueltos como vacío | Medio | Los cuatro de 3.5, explícitos en el banco de evaluación |
-| Costo desbordado por tráfico o abuso | Medio | Caché, límites de gasto, anti-bot |
+| Respuesta incorrecta con apariencia de precisión | Alto — institucional | SQL visible; sin banco de evaluación formal, hoy se revisa a mano |
+| Preguntas fuera de alcance respondidas igual | Alto | Encuadre en el prompt; sin métrica automatizada de tasa de rechazo |
+| Uso político de una respuesta | Alto | Neutralidad por diseño del prompt, trazabilidad completa vía `consultas_log` |
+| Sin rol de Postgres de solo lectura dedicado | Alto | Hoy la única defensa es `sql-guard.ts` + `READ ONLY` a nivel de transacción — ver 4.3 |
+| Sin anti-abuso ni caché | Medio-alto | Cuota del proveedor del modelo actúa como freno de hecho, no por diseño — prioridad 1 de la Etapa 4 |
+| Costo desbordado por tráfico o abuso | Medio | Ver ítem anterior; pendiente de resolver en la Etapa 4 |
 | Deriva entre el dato de Looker y el del chat | Medio | Mismo archivo de origen; documentar la versión usada |
-| Dependencia de una persona | Medio | Scripts versionados, documentación, procedimiento escrito |
+| Dependencia de una persona | Medio | Scripts versionados, documentación |
 
 ---
 
 ## 10. Decisiones abiertas
 
-1. Umbral de acierto exigido para habilitar la apertura pública.
-2. Alcance del registro de preguntas y su período de retención.
+1. Cuándo pasar a un plan de Gemini pago y a qué modelo (Etapa 4).
+2. Alcance del registro de preguntas (`consultas_log`) y su período de retención.
 3. Si el portal se integra al sitio de la CNE o vive en un subdominio propio.
-4. Qué hacer con `codigo_ap` en 2021 cuando se incorpore participación.
-5. Si las 15 colisiones de posición se corrigen en origen o se documentan.
-6. Responsable del mantenimiento una vez en producción.
+4. Prioridad relativa entre las dos ampliaciones de la Etapa 5 (1983 vs.
+   participación de agrupaciones).
+5. Responsable del mantenimiento una vez estabilizada la etapa de prueba.
 
 ---
 
@@ -422,10 +427,17 @@ infraestructura del organismo.
 |---|---|
 | `cargar_postgres.py` | Lee el Excel e inserta en Postgres. Crea tabla y vista |
 | `pg_01_tabla.sql` | DDL de la tabla cruda, todas las columnas texto |
-| `pg_02_vista.sql` | Capa semántica: tipado, nombres de dominio, banderas, índices |
+| `pg_08_agregar_id_candidato.sql` | DDL vigente de `v_candidaturas` (capa semántica): tipado, nombres de dominio, `id_candidato`, índices |
+| `diccionario_terminos.md` | Sinónimos, siglas y nombres coloquiales — fuente de `panel/lib/context.ts` |
+| `panel/` | Aplicación Next.js en producción — ver `panel/README.md` para arrancarla localmente |
 | `data/` | Planillas UEEDA de origen. Fuera de git |
 
-**Puesta en marcha:**
+*(Las migraciones intermedias `pg_02` a `pg_07` — pasos ya aplicados y
+superados por `pg_08` — se archivaron fuera del repo activo; el esquema
+vigente de `consultas_log` y `v_candidaturas` queda documentado en `pg_01` y
+`pg_08`.)*
+
+**Puesta en marcha del pipeline de carga:**
 
 ```bash
 pip install openpyxl "psycopg[binary]"
@@ -437,6 +449,8 @@ Usar la cadena del **session pooler** (puerto 5432): la conexión directa de
 Supabase es IPv6 y no resuelve desde una red IPv4.
 
 Si se recargan los datos: `REFRESH MATERIALIZED VIEW v_candidaturas;`
+
+Para arrancar la aplicación (`panel/`), ver `panel/README.md`.
 
 ---
 
