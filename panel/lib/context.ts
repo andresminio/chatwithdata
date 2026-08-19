@@ -19,7 +19,7 @@ Columnas:
 - fecha_eleccion  date
 - id_distrito     integer
 - distrito        text      24 distritos + 'DISTRITO ÚNICO' (ver diccionario)
-- codigo_agrupacion text    se asigna por distrito y por elección — el mismo número en distritos distintos es OTRA agrupación
+- codigo_agrupacion text    identifica una agrupación solo junto con eleccion, etapa, distrito y cargo — el mismo número repetido en otra elección, etapa, distrito o cargo es OTRA agrupación, no la misma
 - agrupacion      text      denominación de la agrupación política (partido o alianza). Hay ~820 valores distintos, con variantes de texto por distrito/año para el "mismo" espacio político. Ver diccionario antes de filtrar por nombre.
 - lista           text      nombre de lista interna (nula en ~24% de filas: generales sin listas internas)
 - cargo           text      'DIPUTADOS NACIONALES' | 'SENADORES NACIONALES' | 'PARLAMENTARIOS DEL MERCOSUR' | 'PRESIDENTE Y VICE'
@@ -172,53 +172,66 @@ export const REGLAS_SQL = `
   solas si alguno de los operandos es un literal decimal como 100.0, así
   que en ese caso el ::numeric no hace falta pero tampoco molesta agregarlo.
 - Cantidad de "listas" (ej. "cuántas listas se presentaron"): la columna
-  lista NO es única por sí sola (nombres de lista se repiten entre distintos
-  distritos/cargos/agrupaciones). Contar listas distintas como
-    COUNT(DISTINCT (distrito, cargo, codigo_agrupacion, lista))
-  o el equivalente agrupando por esas cuatro columnas, nunca
+  lista NO es única por sí sola (nombres de lista se repiten entre distintas
+  elecciones/etapas/distritos/cargos/agrupaciones). Contar listas distintas
+  como
+    COUNT(DISTINCT (eleccion, etapa, distrito, cargo, codigo_agrupacion, lista))
+  o el equivalente agrupando por esas seis columnas, nunca
   COUNT(DISTINCT lista) a secas ni usando agrupacion (texto) en vez de
-  codigo_agrupacion. Si la pregunta pide el desglose por año y/o etapa,
-  eleccion/etapa van en el GROUP BY de la consulta (el conteo de listas
-  distintas queda naturalmente acotado a cada grupo). Tener en cuenta que
-  lista es nula en candidaturas de cargos sin listas internas (ver columna
-  lista en el esquema): esas filas no deberían sumar a un conteo de listas.
+  codigo_agrupacion. Si el WHERE ya fija eleccion y/o etapa a un valor único,
+  no hace falta repetirlas en el COUNT(DISTINCT (...)) (ya están acotadas),
+  pero si la consulta abarca más de una elección o etapa sin desglosarlas en
+  el GROUP BY, sí tienen que ir en la tupla — si no, un mismo código de
+  agrupación de años o etapas distintos se cuenta como si fuera la misma.
+  Tener en cuenta que lista es nula en candidaturas de cargos sin listas
+  internas (ver columna lista en el esquema): esas filas no deberían sumar a
+  un conteo de listas.
 - Cantidad de "agrupaciones" o "partidos" (ej. "cuántas agrupaciones se
-  presentaron"): igual que con listas, codigo_agrupacion se asigna por
-  distrito y por elección — el mismo código en distritos distintos es OTRA
-  agrupación. Contar agrupaciones distintas como
-    COUNT(DISTINCT (distrito, codigo_agrupacion))
-  o el equivalente agrupando por esas dos columnas, nunca
+  presentaron"): igual que con listas, codigo_agrupacion solo identifica una
+  agrupación junto con eleccion, etapa, distrito y cargo — el mismo código en
+  otra elección, etapa, distrito o cargo es OTRA agrupación. Contar
+  agrupaciones distintas como
+    COUNT(DISTINCT (eleccion, etapa, distrito, cargo, codigo_agrupacion))
+  (recortando las columnas que el WHERE ya fija a un valor único, si
+  corresponde) o el equivalente agrupando por esas columnas, nunca
   COUNT(DISTINCT agrupacion) a secas ni COUNT(DISTINCT codigo_agrupacion)
-  sin distrito. Si el desglose incluye cargo (u otra dimensión) en el
-  GROUP BY, el conteo de agrupaciones distintas queda naturalmente acotado
-  a cada grupo — no hace falta agregar cargo dentro del COUNT(DISTINCT (...)).
+  sin distrito y cargo. Si el desglose incluye cargo (u otra dimensión) en el
+  GROUP BY, el conteo de agrupaciones distintas queda naturalmente acotado a
+  cada grupo — no hace falta repetir esa columna dentro del
+  COUNT(DISTINCT (...)).
 - Identificar o rankear UNA agrupación puntual (ej. "qué partido o coalición
   presentó la mayor cantidad de listas/candidaturas", "cuál es la agrupación
   con más votos... " — cualquier pregunta que pida LA agrupación que más/menos
   algo, no un conteo total): aplica la MISMA regla de scoping que arriba —
   agrupacion (texto) NO identifica una agrupación por sí sola, codigo_agrupacion
-  solo es único junto con distrito. GROUP BY (o PARTITION BY, según el caso)
-  tiene que incluir distrito y codigo_agrupacion, nunca agrupar solo por
-  agrupacion (texto): eso fusiona en una sola fila a todas las agrupaciones
-  homónimas de distintos distritos (ej. "JUNTOS POR EL CAMBIO" de Buenos
-  Aires y de Córdoba son dos agrupaciones legales distintas, no la misma).
-  agrupacion se usa únicamente como columna de display en el SELECT final,
-  nunca como criterio de agrupación. Ejemplo correcto para "qué agrupación
-  presentó más listas en un distrito y elección dados" (ámbito ya acotado a
-  un distrito, no hace falta el GROUP BY compuesto):
-    SELECT agrupacion, COUNT(DISTINCT (cargo, lista)) AS cantidad_listas
+  solo es único junto con eleccion, etapa, distrito y cargo. GROUP BY (o
+  PARTITION BY, según el caso) tiene que incluir esas columnas, nunca agrupar
+  solo por agrupacion (texto): eso fusiona en una sola fila a todas las
+  agrupaciones homónimas de otros distritos O de otros cargos dentro del
+  mismo distrito (ej. "JUNTOS POR EL CAMBIO" de Buenos Aires y de Córdoba son
+  dos agrupaciones legales distintas; "JUNTOS POR EL CAMBIO" en Diputados y
+  en Senadores dentro del mismo distrito también son dos códigos distintos,
+  aunque sea "el mismo partido" en el sentido político). agrupacion se usa
+  únicamente como columna de display en el SELECT final, nunca como criterio
+  de agrupación. Como cargo forma parte de la identidad, si la pregunta no
+  filtra por un cargo puntual el resultado tiene que traer cargo como
+  columna del SELECT y del GROUP BY (no sumar listas de distintos cargos
+  como si fueran de la misma agrupación) — es la misma regla de "no colapsar
+  una dimensión que la pregunta no pidió colapsar" que ya aplica en Modo
+  Totales. Ejemplo correcto para "qué agrupación presentó más listas" (sin
+  acotar a un distrito ni a un cargo, el caso más general):
+    SELECT distrito, cargo, agrupacion, COUNT(DISTINCT lista) AS cantidad_listas
     FROM v_candidaturas
-    WHERE eleccion = ... AND etapa = ... AND distrito = ... AND lista IS NOT NULL
-    GROUP BY agrupacion, codigo_agrupacion
+    WHERE eleccion = ... AND etapa = ... AND lista IS NOT NULL
+    GROUP BY distrito, cargo, agrupacion, codigo_agrupacion
     ORDER BY cantidad_listas DESC LIMIT 1
-  Si la pregunta NO acota a un distrito (ej. "a nivel nacional" o sin mención
-  de distrito), la pregunta es ambigua para este tipo de ranking — el mismo
-  partido puede ser "el que más presentó" en distintos distritos a la vez, y
-  sumar todos los distritos juntos requeriría GROUP BY (distrito,
-  codigo_agrupacion) y después decidir cómo comparar entre distritos, algo
-  que normalmente no tiene una única respuesta con sentido político. Tratarla
-  como fuera de alcance y pedir que se precise el distrito, en vez de
-  fusionar todo por nombre para dar una sola fila nacional.
+  Esto no es ambiguo ni hace falta pedir que se precise nada: hay una única
+  agrupación-cargo-distrito que es la respuesta, y el LIMIT 1 se queda con
+  la que más tuvo. Si la pregunta sí acota a un distrito y/o cargo
+  puntuales, sacar esas columnas del SELECT (ya están fijas por el WHERE) y
+  dejar solo las que efectivamente varían. La respuesta en prosa tiene que
+  mencionar el distrito y el cargo de esa agrupación puntual, no dar a
+  entender que es un resultado nacional o multi-cargo consolidado.
 - Cantidad de "cargos que se eligieron" / bancas a renovar (ej. "cuántos
   cargos se eligieron en cada distrito"): esto NO es lo mismo que contar
   candidatos ni candidaturas. No hay columna de resultados/bancas en la
