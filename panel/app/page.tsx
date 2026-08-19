@@ -115,9 +115,7 @@ function formatearRespuesta(texto: string) {
 const EJEMPLOS = [
   {
     etiqueta: "Diputados Nacionales 2025",
-    pregunta:
-      "¿Quiénes fueron los candidatos titulares a Diputados Nacionales en las elecciones " +
-      "generales de 2025?",
+    pregunta: "¿Quiénes fueron los candidatos a Diputados Nacionales en 2025?",
   },
   {
     etiqueta: "Paridad de género",
@@ -134,21 +132,17 @@ const EJEMPLOS = [
   },
   {
     etiqueta: "Candidatos con más postulaciones",
-    pregunta:
-      "¿Cuáles son los 10 candidatos con más postulaciones a lo largo de todas las " +
-      "elecciones?",
+    pregunta: "¿Qué candidatos registraron la mayor cantidad de postulaciones?",
   },
   {
     etiqueta: "Encabezamientos de listas",
     pregunta:
-      "¿Cuántas listas de las elecciones generales de 2025 estuvieron encabezadas por " +
-      "mujeres, y qué porcentaje representan, desagregado por cargo?",
+      "¿Cuántas listas de 2025 estuvieron encabezadas por mujeres y qué porcentaje " +
+      "representan, desagregado por cargo?",
   },
   {
     etiqueta: "Edades por cargo",
-    pregunta:
-      "¿Cuál es la edad promedio de los candidatos al momento de la elección, agrupada " +
-      "por cargo?",
+    pregunta: "¿Cuál es la edad promedio de los candidatos por cargo?",
   },
   {
     etiqueta: "Cargos que se eligieron",
@@ -303,7 +297,7 @@ const PASOS_TOUR = [
       "El resultado completo queda en esta tabla, y podés bajarla a un Excel con el botón de arriba. El máximo permitido es de 1000 filas.",
   },
   {
-    el: "p-disclaimer",
+    el: "p-respuesta",
     titulo: "Verificá la información importante",
     texto:
       "Como toda respuesta generada con IA, conviene verificar los datos importantes antes de usarlos — por eso ese aviso acompaña cada respuesta.",
@@ -993,7 +987,7 @@ export default function Home() {
         <div className="answer-card" id="p-respuesta">
           <div className="label">Respuesta</div>
           <div className="answer-text">{formatearRespuesta(resultado.respuesta)}</div>
-          <div className="answer-disclaimer" id="p-disclaimer">
+          <div className="answer-disclaimer">
             Contenido generado con inteligencia artificial. Verificá la información importante antes de utilizarla.
           </div>
           {resultado.logId != null && (
@@ -1641,11 +1635,9 @@ export default function Home() {
         }
         .chips-sub-label {
           display: block;
-          font-size: 11px;
+          font-size: 12px;
           font-weight: 600;
           color: var(--ink-soft);
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
           margin-bottom: 8px;
         }
         .chips-sub-wrap .chips-sub {
@@ -2025,10 +2017,10 @@ export default function Home() {
               <path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z" />
             </svg>
           </div>
-          <h2>¿Es tu primera vez por acá?</h2>
+          <h2>¿Primera vez por acá?</h2>
           <p>
-            Explora cómo hacer preguntas, interpretar las respuestas y sacarle el máximo provecho al
-            asistente. Te mostramos cómo empezar, en menos de un minuto.
+            Te mostramos en pocos pasos cómo hacer preguntas, interpretar las respuestas y sacarle el
+            máximo beneficio al asistente. Tarda menos de un minuto.
           </p>
           <div className="tour-bienvenida-botones">
             <button type="button" className="tour-btn-ahora-no" onClick={cerrarTourDelTodo}>
