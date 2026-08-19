@@ -192,6 +192,33 @@ export const REGLAS_SQL = `
   sin distrito. Si el desglose incluye cargo (u otra dimensión) en el
   GROUP BY, el conteo de agrupaciones distintas queda naturalmente acotado
   a cada grupo — no hace falta agregar cargo dentro del COUNT(DISTINCT (...)).
+- Identificar o rankear UNA agrupación puntual (ej. "qué partido o coalición
+  presentó la mayor cantidad de listas/candidaturas", "cuál es la agrupación
+  con más votos... " — cualquier pregunta que pida LA agrupación que más/menos
+  algo, no un conteo total): aplica la MISMA regla de scoping que arriba —
+  agrupacion (texto) NO identifica una agrupación por sí sola, codigo_agrupacion
+  solo es único junto con distrito. GROUP BY (o PARTITION BY, según el caso)
+  tiene que incluir distrito y codigo_agrupacion, nunca agrupar solo por
+  agrupacion (texto): eso fusiona en una sola fila a todas las agrupaciones
+  homónimas de distintos distritos (ej. "JUNTOS POR EL CAMBIO" de Buenos
+  Aires y de Córdoba son dos agrupaciones legales distintas, no la misma).
+  agrupacion se usa únicamente como columna de display en el SELECT final,
+  nunca como criterio de agrupación. Ejemplo correcto para "qué agrupación
+  presentó más listas en un distrito y elección dados" (ámbito ya acotado a
+  un distrito, no hace falta el GROUP BY compuesto):
+    SELECT agrupacion, COUNT(DISTINCT (cargo, lista)) AS cantidad_listas
+    FROM v_candidaturas
+    WHERE eleccion = ... AND etapa = ... AND distrito = ... AND lista IS NOT NULL
+    GROUP BY agrupacion, codigo_agrupacion
+    ORDER BY cantidad_listas DESC LIMIT 1
+  Si la pregunta NO acota a un distrito (ej. "a nivel nacional" o sin mención
+  de distrito), la pregunta es ambigua para este tipo de ranking — el mismo
+  partido puede ser "el que más presentó" en distintos distritos a la vez, y
+  sumar todos los distritos juntos requeriría GROUP BY (distrito,
+  codigo_agrupacion) y después decidir cómo comparar entre distritos, algo
+  que normalmente no tiene una única respuesta con sentido político. Tratarla
+  como fuera de alcance y pedir que se precise el distrito, en vez de
+  fusionar todo por nombre para dar una sola fila nacional.
 - Cantidad de "cargos que se eligieron" / bancas a renovar (ej. "cuántos
   cargos se eligieron en cada distrito"): esto NO es lo mismo que contar
   candidatos ni candidaturas. No hay columna de resultados/bancas en la

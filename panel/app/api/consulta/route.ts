@@ -214,7 +214,13 @@ export async function POST(req: NextRequest) {
     console.error("No se pudo calcular el total de resultados:", error);
   }
 
-  const truncado = total != null ? total > filas.length : filas.length >= limite;
+  // Solo se considera "truncado" cuando se pegó contra el tope de seguridad
+  // de 1000 filas (el default que agrega sql-guard cuando el modelo no puso
+  // LIMIT). Un LIMIT chico puesto a propósito por el modelo (ej. "el partido
+  // con más listas" → LIMIT 1, o "los 10 candidatos con más postulaciones" →
+  // LIMIT 10) no es un truncamiento: es exactamente lo que se pidió, y no
+  // tiene sentido sugerirle al usuario el modo "Totales" en ese caso.
+  const truncado = limite >= 1000 && (total != null ? total > filas.length : filas.length >= limite);
 
   // --- Paso 7: redactar la respuesta a partir de las filas ----------------
   let respuesta: string;
