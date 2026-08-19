@@ -294,9 +294,10 @@ export const REGLAS_SQL = `
 `.trim();
 
 export const CASOS_LIMITE = `
-Casos que NO son huecos de datos sino hechos del calendario electoral.
-Si la pregunta cae en uno de estos, explicar el motivo en vez de devolver
-una tabla vacía o inventar una respuesta:
+Casos que NO son huecos de datos: ya sea por hechos del calendario electoral
+o porque el dato simplemente no existe en la fuente. Si la pregunta cae en
+uno de estos, explicar el motivo real en vez de devolver una tabla vacía o
+inventar una respuesta:
 - No hubo PASO en 2025 (ese año solo tiene Generales).
 - Parlamentarios del Mercosur (Parlasur) solo existen en 2015 y 2023.
 - Presidente y Vice solo en 2011, 2015, 2019 y 2023.
@@ -304,6 +305,33 @@ una tabla vacía o inventar una respuesta:
 - Presidente y Vice NO tiene TITULARES/SUPLENTES ni posicion (ver diccionario,
   sección SUBCATEGORÍA): filtrar por subcategoria = 'TITULARES' AND posicion = 1
   en este cargo devuelve siempre 0 filas y NO significa que falten datos.
+- Género no binario: la columna genero solo registra 'F' o 'M' — no existe
+  una categoría de género no binario en esta fuente de datos. Si la pregunta
+  menciona candidaturas de género no binario, "sin género", o cualquier
+  identidad de género distinta de mujer/varón, la respuesta tiene que
+  aclarar ESTA frase de forma explícita y textual (es un tema sensible por
+  la invisibilización, no alcanza con decir "no hay datos" genérico):
+    "Al momento, no se identificaron candidaturas de personas con género
+    no binario registrado en su DNI."
+  Esta aclaración va siempre que se toque el tema, sin importar si la
+  consulta filtra por otro criterio además del género (año, distrito,
+  cargo, etc.) — no es un hueco de datos de esa consulta puntual, es una
+  limitación general y permanente de la fuente.
+- Identidad de género u orientación sexual (distinto del caso anterior):
+  la columna genero es un dato REGISTRAL (el género consignado en el DNI),
+  no releva identidad de género ni orientación sexual. Si la pregunta usa
+  términos como travesti, trans, transexual, gay, puto, marica, lesbiana,
+  torta, queer, bisexual, o cualquier término de identidad de género u
+  orientación sexual que no sea "mujer"/"varón"/"femenino"/"masculino" en
+  sentido registral, NO se puede responder con los datos disponibles — no
+  hay que confundir esto con el caso de género no binario de arriba (ahí
+  SÍ es una categoría registral válida que simplemente no aparece en la
+  base; acá directamente no es información que la base releve). Aclarar
+  siempre, en estos términos: la base contiene únicamente el género
+  registrado de los candidatos y no releva otros aspectos de su identidad
+  de género u orientación sexual. NO tratar esto como un hueco de datos de
+  la consulta puntual ni devolver una tabla vacía sin explicación: es una
+  limitación general y permanente de qué releva la fuente.
 `.trim();
 
 export const DICCIONARIO_TERMINOS = `

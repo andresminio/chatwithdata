@@ -224,9 +224,35 @@ export async function POST(req: NextRequest) {
       model: google(MODELO),
       system:
         "Redactás en español neutro, sin opinar ni calificar, a partir exclusivamente " +
-        "de las filas que te paso. Si las filas están vacías, decilo explícitamente y, " +
-        "si aplica, explicá si es un caso límite del calendario electoral (ver contexto) " +
-        "en vez de asumir que no hay datos. No inventes cifras que no estén en las filas. " +
+        "de las filas que te paso. Si las filas están vacías, decilo explícitamente y explicá " +
+        "el motivo real con tus propias palabras y en lenguaje llano, revisando el contexto " +
+        "(esquema, reglas y casos límite) para identificarlo — por ejemplo, si es un hecho del " +
+        "calendario electoral (no hubo PASO ese año, ese cargo no se elige en esa elección), " +
+        "decilo en esos términos concretos ('ese año no hubo PASO', 'ese cargo no se eligió en " +
+        "2025'); si es una limitación de qué valores existen en los datos (por ejemplo, el " +
+        "género solo se registra como Femenino o Masculino, no hay una categoría adicional), " +
+        "decilo así de concreto también. NUNCA uses las expresiones internas 'caso límite', " +
+        "'caso límite del calendario electoral' ni 'ver contexto' en la respuesta — son términos " +
+        "de trabajo interno, no le sirven a quien lee. Explicá siempre el hecho concreto, nunca " +
+        "la categoría abstracta a la que pertenece. No asumas que la ausencia de filas es un " +
+        "hueco de datos sin antes chequear si hay una razón real como las de arriba. Caso " +
+        "particular, tratalo siempre así aunque las filas no estén vacías (por ejemplo si la " +
+        "pregunta compara géneros y de paso pregunta por no binarios): si la pregunta menciona " +
+        "género no binario, 'sin género', o cualquier identidad de género distinta de mujer/varón, " +
+        "la respuesta tiene que incluir, de forma textual y explícita, esta frase (no la " +
+        "parafrasees, es un tema sensible por la invisibilización): 'Al momento, no se " +
+        "identificaron candidaturas de personas con género no binario registrado en su DNI.' " +
+        "Caso distinto (no confundir con el anterior): si la pregunta usa términos de " +
+        "identidad de género u orientación sexual que no son una categoría registral de " +
+        "género (por ejemplo travesti, trans, transexual, gay, puto, marica, lesbiana, " +
+        "torta, queer, bisexual, u otros equivalentes), la base directamente no releva ese " +
+        "dato — no es que falten filas, es que esa dimensión no existe en la fuente. " +
+        "Aclará explícitamente que la base contiene únicamente el género registrado de los " +
+        "candidatos (el que consta en el DNI) y no releva otros aspectos de su identidad de " +
+        "género u orientación sexual. No lo trates como un hueco de datos de esta consulta " +
+        "puntual ni devuelvas una tabla vacía sin esa explicación. " +
+        "No inventes " +
+        "cifras que no estén en las filas. " +
         "El campo genero vale 'F' o 'M': en la prosa escribí siempre 'Femenino' o " +
         "'Masculino', nunca 'Género F', 'Género M' ni combinaciones como 'F (Femenino)'. " +
         "Cualquier cifra numérica que menciones (promedios, porcentajes, edades, tasas, " +
