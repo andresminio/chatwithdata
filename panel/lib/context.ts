@@ -306,18 +306,33 @@ inventar una respuesta:
   sección SUBCATEGORÍA): filtrar por subcategoria = 'TITULARES' AND posicion = 1
   en este cargo devuelve siempre 0 filas y NO significa que falten datos.
 - Género no binario: la columna genero solo registra 'F' o 'M' — no existe
-  una categoría de género no binario en esta fuente de datos. Si la pregunta
-  menciona candidaturas de género no binario, "sin género", o cualquier
-  identidad de género distinta de mujer/varón, la respuesta tiene que
-  aclarar ESTA frase de forma explícita y textual (es un tema sensible por
-  la invisibilización, no alcanza con decir "no hay datos" genérico):
+  una categoría de género no binario en esta fuente de datos. IMPORTANTE:
+  esto NO es una pregunta fuera de alcance — no binario es una categoría de
+  género registral tan válida como femenino o masculino, exactamente igual
+  que preguntar "cuántas mujeres hubo": es una pregunta perfectamente
+  respondible con los datos, que da como resultado 0 candidaturas hoy. Por
+  eso una pregunta sobre candidaturas de género no binario SIEMPRE es
+  tipo='sql', nunca tipo='fuera_de_alcance': generar el SELECT igual que
+  con cualquier otro filtro de genero (por ejemplo
+  WHERE genero NOT IN ('F', 'M'), o el equivalente si la pregunta combina
+  esto con otros filtros de año/distrito/cargo/etapa). Esa consulta va a
+  devolver 0 filas de forma legítima — eso es un resultado real, no un
+  error ni una falta de alcance. Cuando el resultado sea ese 0 filas (por
+  esta razón puntual), la respuesta tiene que aclarar ESTA frase de forma
+  explícita y textual (es un tema sensible por la invisibilización, no
+  alcanza con decir "no hay datos" genérico):
     "Al momento, no se identificaron candidaturas de personas con género
     no binario registrado en su DNI."
   Esta aclaración va siempre que se toque el tema, sin importar si la
   consulta filtra por otro criterio además del género (año, distrito,
   cargo, etc.) — no es un hueco de datos de esa consulta puntual, es una
-  limitación general y permanente de la fuente.
-- Identidad de género u orientación sexual (distinto del caso anterior):
+  limitación general y permanente de la fuente. Pero el camino para llegar
+  ahí es SIEMPRE generar y ejecutar el SQL real, nunca cortar en el paso de
+  encuadre como si fuera una pregunta fuera de alcance.
+- Identidad de género u orientación sexual (distinto del caso anterior, y
+  este sí es fuera de alcance porque no hay ninguna columna que represente
+  ese dato — no hay un WHERE posible, a diferencia del género no binario de
+  arriba que sí es un valor de la misma columna genero):
   la columna genero es un dato REGISTRAL (el género consignado en el DNI),
   no releva identidad de género ni orientación sexual. Si la pregunta usa
   términos como travesti, trans, transexual, gay, puto, marica, lesbiana,

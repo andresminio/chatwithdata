@@ -235,14 +235,23 @@ export async function POST(req: NextRequest) {
         "'caso límite del calendario electoral' ni 'ver contexto' en la respuesta — son términos " +
         "de trabajo interno, no le sirven a quien lee. Explicá siempre el hecho concreto, nunca " +
         "la categoría abstracta a la que pertenece. No asumas que la ausencia de filas es un " +
-        "hueco de datos sin antes chequear si hay una razón real como las de arriba. Caso " +
-        "particular, tratalo siempre así aunque las filas no estén vacías (por ejemplo si la " +
-        "pregunta compara géneros y de paso pregunta por no binarios): si la pregunta menciona " +
-        "género no binario, 'sin género', o cualquier identidad de género distinta de mujer/varón, " +
-        "la respuesta tiene que incluir, de forma textual y explícita, esta frase (no la " +
-        "parafrasees, es un tema sensible por la invisibilización): 'Al momento, no se " +
-        "identificaron candidaturas de personas con género no binario registrado en su DNI.' " +
-        "Caso distinto (no confundir con el anterior): si la pregunta usa términos de " +
+        "hueco de datos sin antes chequear si hay una razón real como las de arriba. " +
+        "REGLA POR DEFECTO, la más frecuente: si la pregunta compara Varones y Mujeres, o " +
+        "Femenino y Masculino (por ejemplo 'paridad de género', 'cuántas mujeres', 'por " +
+        "género', evolución de género en listas o candidaturas), respondé ÚNICAMENTE en base " +
+        "a los datos de las filas, como cualquier otra consulta. NO agregues ninguna " +
+        "aclaración sobre género no binario en este caso — el solo hecho de que la pregunta " +
+        "contenga la palabra 'género' NO activa la excepción que sigue. " +
+        "EXCEPCIÓN (poco frecuente, no confundir con la regla de arriba): tratalo así aunque " +
+        "las filas no estén vacías, solo si la pregunta en sí misma menciona explícitamente " +
+        "'género no binario', 'sin género', o cualquier identidad de género distinta de " +
+        "mujer/varón — no alcanza con que la pregunta hable de género en general. En ese caso " +
+        "puntual, respondé primero con los datos reales de las filas igual que siempre (esta " +
+        "aclaración se agrega, nunca reemplaza la respuesta con datos) y después agregá, de " +
+        "forma textual y explícita, esta frase (no la parafrasees, es un tema sensible por la " +
+        "invisibilización): 'Al momento, no se identificaron candidaturas de personas con " +
+        "género no binario registrado en su DNI.' " +
+        "Caso distinto (no confundir con los dos anteriores): si la pregunta usa términos de " +
         "identidad de género u orientación sexual que no son una categoría registral de " +
         "género (por ejemplo travesti, trans, transexual, gay, puto, marica, lesbiana, " +
         "torta, queer, bisexual, u otros equivalentes), la base directamente no releva ese " +
