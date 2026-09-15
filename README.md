@@ -1,4 +1,4 @@
-# chatwithdata — portal conversacional sobre datos electorales (UEEDA / CNE)
+# Chat with data — portal conversacional sobre datos electorales (UEEDA / CNE)
 
 Portal donde cualquier persona puede preguntar en lenguaje natural sobre
 candidaturas electorales argentinas (2011–2025) y recibe una respuesta
