@@ -3,7 +3,7 @@
 Portal donde cualquier persona puede preguntar en lenguaje natural sobre
 candidaturas electorales argentinas (2011–2025) y recibe una respuesta
 construida a partir de una consulta SQL real sobre los datos oficiales de la
-UEEDA. En producción, en etapa de prueba: **[chatwithdata-ten.vercel.app](https://chatwithdata-ten.vercel.app)**.
+UEEDA. En producción, en etapa de prueba: **[chatwithdata-phi.vercel.app](https://chatwithdata-phi.vercel.app)**.
 
 Documentación completa:
 
