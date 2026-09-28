@@ -343,6 +343,7 @@ export async function POST(req: NextRequest) {
   // --- Paso 7: redactar la respuesta a partir de las filas ----------------
   let respuesta: string;
   let redaccionFallo = false;
+  let errorRedaccion: string | null = null;
   try {
     const { text } = await conRotacionDeModelos((modelo) =>
       generateText({
@@ -375,13 +376,16 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     // Si falla la redacción, igual devolvemos el SQL y las filas: son el
     // dato auditable (4.1 principio rector). La prosa es accesorio.
+    // El texto aclara que lo que falló es SOLO el resumen: la tabla viene de
+    // Postgres, no de la IA, así que los datos que se muestran están bien.
     redaccionFallo = true;
+    errorRedaccion = String(error);
     respuesta =
       error instanceof ErrorIaNoDisponible
         ? error.soloCuota
-          ? "Llegamos al límite de consultas a la IA por el momento, pero podés ver la información que buscabas a continuación."
-          : "En este momento el modelo de IA está experimentando alta demanda, pero podés ver la información que buscabas a continuación."
-        : "Podés ver la información que buscabas a continuación.";
+          ? "No pudimos generar el resumen porque se alcanzó el límite de consultas a la IA por el momento. Los resultados de tu consulta están en la tabla de abajo."
+          : "No pudimos generar el resumen porque la IA está con alta demanda en este momento. Los resultados de tu consulta están en la tabla de abajo."
+        : "No pudimos generar el resumen en este momento. Los resultados de tu consulta están en la tabla de abajo.";
   }
 
   // Solo se cachea una respuesta completa: si la redacción falló, la próxima
@@ -402,6 +406,7 @@ export async function POST(req: NextRequest) {
     pregunta,
     sqlGenerado: validacion.sql,
     resultado: redaccionFallo ? "error_redaccion" : "ok",
+    error: errorRedaccion,
     filasDevueltas: filas.length,
     totalRegistros: total,
     truncado,
