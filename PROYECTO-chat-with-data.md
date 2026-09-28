@@ -1,8 +1,5 @@
 # Proyecto: Portal conversacional sobre datos electorales — UEEDA / CNE
 
-Documento de contexto. Refleja el estado real del proyecto, no el plan original.
-Última revisión: 19 de agosto de 2026.
-
 ---
 
 ## 1. Qué es
