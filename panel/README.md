@@ -19,8 +19,14 @@ Abrir `http://localhost:3000`.
 
 - `DATABASE_URL` — cadena del **session pooler** de Supabase, puerto 5432 (no la conexión directa, que es IPv6).
 - `GOOGLE_GENERATIVE_AI_API_KEY` — de [Google AI Studio](https://aistudio.google.com/apikey).
-- `GEMINI_MODEL` (opcional) — default `gemini-3.5-flash-lite`. Se eligió una
-  variante "Lite" a propósito: los Flash completos (3.6, 3.5, 2.5, 3)
+- `GEMINI_MODELS` (opcional) — lista de modelos en orden de preferencia,
+  separados por coma. Default: `gemini-3.5-flash-lite,gemini-3.6-flash`. Si un
+  modelo responde 429/500/503 se reintenta 2 veces (5 s entre intentos) y
+  después se rota al siguiente; si responde 404 se pasa directo al siguiente.
+  Recién si fallan todos, la app muestra "En este momento el modelo de IA está
+  experimentando alta demanda". Lógica en `lib/ia.ts`. (`GEMINI_MODEL`, la
+  variable anterior, sigue funcionando: pone ese modelo primero en la lista.)
+  Se eligió un "Lite" como primera opción a propósito: los Flash completos (3.6, 3.5, 2.5, 3)
   comparten el mismo límite gratuito de 5 RPM / 20 RPD, que dos llamadas por
   pregunta agotan en minutos; los "Flash Lite" de la línea 3.x dan 15 RPM /
   500 RPD. Pasar a un modelo de mayor poder de razonamiento (con plan pago)
