@@ -7,6 +7,7 @@
 --   candidaturas     capa cruda, todas las columnas texto (espejo del Excel)
 --   v_candidaturas   capa semántica (vista materializada) que consulta el panel
 --   consultas_log    historial de preguntas del panel
+--   respuestas_cache respuestas ya calculadas, para no volver a llamar a la IA
 --
 -- Se puede volver a correr: recrea candidaturas y v_candidaturas desde cero,
 -- pero NO toca consultas_log si ya existe (conserva el historial).
@@ -180,6 +181,36 @@ COMMENT ON TABLE consultas_log IS
 
 
 -- ----------------------------------------------------------------------------
+-- Caché de respuestas del panel (ver panel/lib/cache.ts)
+--
+-- Una fila por pregunta normalizada + versión de los prompts. Se vacía al
+-- recargar los datos (cargar_postgres.py). IF NOT EXISTS: correr este archivo
+-- de nuevo no la borra; se recrea vacía solo si no existía.
+-- ----------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS respuestas_cache (
+  clave            text        PRIMARY KEY,  -- sha256(version + pregunta normalizada)
+  version          text        NOT NULL,     -- hash de los prompts vigentes al guardarla
+  pregunta         text        NOT NULL,     -- pregunta normalizada, para poder leerla
+  respuesta        text        NOT NULL,
+  sql              text        NOT NULL,
+  explicacion_sql  text,
+  filas            json        NOT NULL,  -- json y no jsonb: jsonb reordena las claves y
+                                            -- el panel arma las columnas con ese orden
+  total            integer,
+  truncado         boolean     NOT NULL,
+  limite           integer     NOT NULL,
+  creado           timestamptz NOT NULL DEFAULT now(),
+  usos             integer     NOT NULL DEFAULT 0,  -- veces que se sirvió desde la caché
+  ultimo_uso       timestamptz
+);
+
+COMMENT ON TABLE respuestas_cache IS
+  'Respuestas completas ya calculadas por el panel, por pregunta normalizada y '
+  'version de los prompts. Se vacia al recargar los datos.';
+
+
+-- ----------------------------------------------------------------------------
 -- Seguridad (API pública de Supabase)
 --
 -- La app se conecta como postgres por el session pooler y no depende de nada
@@ -193,6 +224,7 @@ COMMENT ON TABLE consultas_log IS
 
 ALTER TABLE candidaturas  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE consultas_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE respuestas_cache ENABLE ROW LEVEL SECURITY;
 
 DO $$
 BEGIN

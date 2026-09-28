@@ -152,6 +152,17 @@ def main():
             log(f"refrescando {VISTA}")
             cur.execute(f"REFRESH MATERIALIZED VIEW {VISTA}")
 
+            # Datos nuevos => las respuestas cacheadas del panel pueden estar
+            # desactualizadas. Se vacia la cache (si la tabla existe).
+            log("vaciando respuestas_cache")
+            cur.execute("""
+                DO $$ BEGIN
+                  IF to_regclass('public.respuestas_cache') IS NOT NULL THEN
+                    TRUNCATE respuestas_cache;
+                  END IF;
+                END $$
+            """)
+
             cur.execute(f"""
                 SELECT count(*) AS filas,
                        count(*) FILTER (WHERE id_candidato IS NOT NULL) AS con_id_candidato

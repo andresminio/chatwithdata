@@ -5,7 +5,7 @@ import { Pool } from "pg";
 // lo esperado.
 let pool: Pool | undefined;
 
-function obtenerPool(): Pool {
+export function obtenerPool(): Pool {
   if (!pool) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
@@ -50,6 +50,7 @@ export async function ejecutarSelect(sql: string): Promise<ResultadoConsulta> {
 
 export type ResultadoLog =
   | "ok"
+  | "ok_cache" // respuesta servida desde respuestas_cache, sin llamar a la IA
   | "fuera_de_alcance"
   | "error_generacion"
   | "error_validacion"
