@@ -30,7 +30,7 @@ sección 7).
 |---|---|
 | Datos en Postgres | Hecho |
 | Capa semántica (`v_candidaturas`) | Hecha — tipada, con índices para los filtros más frecuentes |
-| Diccionario de términos | Hecho — `diccionario_terminos.md`, traducido a prompt en `panel/lib/context.ts` |
+| Diccionario de términos | Hecho — en `panel/lib/context.ts` (`DICCIONARIO_TERMINOS`) |
 | Banco de evaluación formal | No se hizo — se saltó a propósito para priorizar el resultado funcional |
 | Ejemplos resueltos (pregunta–SQL) en el prompt | No se hizo — mismo motivo |
 | Aplicación de chat | Hecha y en producción (`panel/`, Next.js) |
@@ -218,12 +218,13 @@ depender de apellido + nombres (que se repite y varía en escritura). La
 traducción a SQL falla sobre todo al resolver uniones entre tablas; acá no hay
 ninguna que resolver.
 
-**Diccionario de términos** (`diccionario_terminos.md`) — sinónimos, siglas y
-nombres coloquiales: "CABA" y "Capital Federal", "diputados" y "Diputados
-Nacionales", "Parlasur", "las PASO", "LLA". Se armó a partir de los valores
-reales del Excel de origen, no de supuestos. Se inyecta en el prompt vía
-`panel/lib/context.ts` — si el diccionario cambia, hay que actualizar ese
-archivo a mano, no está automatizado.
+**Diccionario de términos** (`DICCIONARIO_TERMINOS` en `panel/lib/context.ts`)
+— sinónimos, siglas y nombres coloquiales: "CABA" y "Capital Federal",
+"diputados" y "Diputados Nacionales", "Parlasur", "las PASO", "LLA". Se armó a
+partir de los valores reales del Excel de origen, no de supuestos.
+`context.ts` es la única fuente de verdad: lo que está en sus textos llega al
+modelo, y la justificación de cada regla queda en comentarios del mismo
+archivo (que no llegan al modelo).
 
 **Regla de dominio: nunca fusionar agrupaciones por nombre.** Cada grafía de
 `agrupacion` (p. ej. las más de 30 variantes de "Cambiemos" o de "Frente de
@@ -424,7 +425,6 @@ exigencia de que los datos no salgan de la infraestructura del organismo.
 |---|---|
 | `cargar_postgres.py` | Lee el Excel e inserta en Postgres. Crea el esquema y refresca la vista |
 | `pg_02_esquema.sql` | Esquema completo vigente, exportado de producción: tabla cruda `candidaturas` (todo texto), `v_candidaturas` (capa semántica: tipado, nombres de dominio, `id_candidato`, índices), `consultas_log` y permisos de la API de Supabase |
-| `diccionario_terminos.md` | Sinónimos, siglas y nombres coloquiales — fuente de `panel/lib/context.ts` |
 | `panel/` | Aplicación Next.js en producción — ver `panel/README.md` para arrancarla localmente |
 | `data/` | Planillas UEEDA de origen. Fuera de git |
 

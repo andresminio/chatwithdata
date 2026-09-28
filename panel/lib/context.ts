@@ -1,11 +1,18 @@
 /**
  * Contexto fijo que se inyecta en cada llamada al modelo: esquema de
- * v_candidaturas, reglas de alcance y diccionario de términos.
+ * v_candidaturas, reglas de SQL, casos límite y diccionario de términos.
  *
- * Fuente de verdad: PROYECTO-chat-with-data.md y diccionario_terminos.md,
- * un nivel arriba de panel/. Este archivo es un resumen compacto pensado
- * para prompt, no un reemplazo — si el diccionario cambia, actualizar acá
- * a mano.
+ * ÚNICA FUENTE DE VERDAD del contexto del modelo. No hay otro archivo que
+ * se sincronice con este: para cambiar cómo el modelo interpreta un término,
+ * se cambia acá.
+ *
+ * Cómo se arma: construirContextoSistema() (al final del archivo) pega los
+ * cuatro bloques en un solo texto, que route.ts manda como `system` en la
+ * llamada que traduce la pregunta a SQL.
+ *
+ * Lo que va DENTRO de los textos (entre backticks) lo lee el modelo en cada
+ * pregunta y consume cuota. Los comentarios de TypeScript como este NO
+ * llegan al modelo: son el lugar para dejar la justificación de una regla.
  */
 
 export const ESQUEMA_VISTA = `
@@ -389,6 +396,31 @@ inventar una respuesta:
   limitación general y permanente de qué releva la fuente.
 `.trim();
 
+/*
+ * DICCIONARIO_TERMINOS — notas para humanos (no llegan al modelo).
+ *
+ * Los valores se relevaron del Excel de origen real (UEEDA Precandidaturas y
+ * Candidaturas 2011 2025 v070826.xlsx, 38.865 filas), no de supuestos.
+ *
+ * Por qué las agrupaciones van con ILIKE y nunca con igualdad: cada grafía de
+ * `agrupacion` es una entidad legal distinta por distrito y elección, y el
+ * mismo espacio político aparece con muchas variantes de texto. Variantes
+ * relevadas: La Libertad Avanza 5, Frente de Izquierda 36, Cambiemos 30,
+ * Juntos por el Cambio 13, Frente de Todos 7, Frente Renovador 14,
+ * Justicialista 12. El patrón ILIKE las trae todas y el SQL visible las
+ * muestra desagregadas, así un match de más queda a la vista y no oculto en
+ * un total.
+ *
+ * Cambiemos vs. Juntos por el Cambio: misma coalición, pero son etiquetas de
+ * época distintas (2015/2017 vs. 2019 en adelante). No se fusionan.
+ *
+ * UCR: la fuente tiene una variante mal tipeada, 'UNION CIVICA RADICA' (sin
+ * la L final). Por eso el patrón termina en RADICA%: cubre las dos grafías.
+ *
+ * FIT: "izquierda" a secas es demasiado amplio (también matchea "Izquierda al
+ * Frente por el Socialismo", que es otra fuerza); por eso el patrón exige
+ * IZQUIERDA...TRABAJADORES.
+ */
 export const DICCIONARIO_TERMINOS = `
 DISTRITO — alias → valor exacto en 'distrito':
   CABA / Capital / Ciudad de Buenos Aires → CAPITAL FEDERAL
@@ -403,6 +435,7 @@ CARGO — alias → valor exacto en 'cargo':
   diputados → DIPUTADOS NACIONALES
   senadores → SENADORES NACIONALES
   Parlasur / parlamentario del Mercosur → PARLAMENTARIOS DEL MERCOSUR
+  "eurodiputado" NO es sinónimo de Parlasur: no mapearlo a ningún cargo.
   presidente / presidencial → PRESIDENTE Y VICE
 
 SUBCATEGORÍA — alias → valor exacto en 'subcategoria':
@@ -433,8 +466,12 @@ PARTIDOS Y SIGLAS — usar ILIKE, nunca igualdad exacta (821 agrupaciones distin
   Frente de Todos / FdT → agrupacion ILIKE '%FRENTE DE TODOS%'
   Frente Renovador → agrupacion ILIKE '%FRENTE RENOVADOR%'
   PRO / Propuesta Republicana → agrupacion ILIKE '%PROPUESTA REPUBLICANA%' OR agrupacion ILIKE '%UNION PRO%' OR agrupacion ILIKE '%UNIÓN PRO%'
-  UCR / radicales → agrupacion ILIKE '%UNION CIVICA RADICAL%' OR agrupacion ILIKE '%UNIÓN CÍVICA RADICAL%'
+    NUNCA usar agrupacion ILIKE '%PRO%' solo: matchea de más (PROGRESISTA, PROVINCIAL, PROYECTO, etc.).
+  UCR / radicales → agrupacion ILIKE '%UNION CIVICA RADICA%' OR agrupacion ILIKE '%UNIÓN CÍVICA RADICA%'
   PJ / Justicialista → agrupacion ILIKE '%JUSTICIALISTA%'
+    "peronismo" / "peronista" en sentido amplio (el espacio político, no el partido) NO equivale a este
+    patrón: %JUSTICIALISTA% solo cubre agrupaciones con ese nombre, no alianzas peronistas con otra
+    denominación (por ejemplo Frente de Todos).
   Para cualquier sigla no listada: armar un patrón ILIKE con el nombre más largo y distintivo posible.
 
 FUERA DE ALCANCE — no traducir, explicar el límite:

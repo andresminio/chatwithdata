@@ -196,8 +196,8 @@ const ETAPAS = ["PASO", "Generales"];
 const ANIOS = ["2011", "2013", "2015", "2017", "2019", "2021", "2023", "2025"];
 const ANIOS_SIN_PASO = new Set(["2025"]);
 
-// Valores exactos de la columna distrito (ver diccionario_terminos.md,
-// sección 1): 24 provincias + DISTRITO ÚNICO. Se deja afuera DISTRITO
+// Valores exactos de la columna distrito (ver DICCIONARIO_TERMINOS en
+// lib/context.ts): 24 provincias + DISTRITO ÚNICO. Se deja afuera DISTRITO
 // ÚNICO acá porque no es una provincia elegible por el usuario, es la
 // categoría de Presidente y Vice / Parlasur.
 // { valor: exactamente lo que tiene la columna distrito (va en la

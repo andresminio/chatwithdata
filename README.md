@@ -12,8 +12,9 @@ Documentación completa:
   proyecto, alcance, arquitectura, estado actual y roadmap.
 - [`panel/README.md`](./panel/README.md) — cómo levantar la aplicación
   (`panel/`, Next.js) en local.
-- [`diccionario_terminos.md`](./diccionario_terminos.md) — sinónimos, siglas
-  y nombres coloquiales usados para traducir preguntas a SQL.
+- [`panel/lib/context.ts`](./panel/lib/context.ts) — contexto del modelo
+  (esquema, reglas de SQL, casos límite y diccionario de términos). Única
+  fuente de verdad de cómo se traducen las preguntas a SQL.
 
 ## Estructura del repo
 
@@ -22,7 +23,6 @@ Documentación completa:
 | `panel/` | Aplicación Next.js en producción: chat, validación de SQL, ejecución contra Postgres |
 | `cargar_postgres.py` | Crea el esquema y carga la planilla UEEDA (`data/`) a Postgres |
 | `pg_02_esquema.sql` | Esquema completo vigente: tabla cruda `candidaturas`, vista `v_candidaturas`, `consultas_log`, índices y permisos |
-| `diccionario_terminos.md` | Diccionario de términos del dominio electoral |
 | `data/` | Planillas UEEDA de origen (fuera de git) |
 
 Los datos son de publicación oficial de la UEEDA/CNE; el DNI y la fecha de
