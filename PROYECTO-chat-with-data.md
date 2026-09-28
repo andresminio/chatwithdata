@@ -109,7 +109,7 @@ sería incorrecta; hay que explicar por qué no hay datos.
 data/*.xlsx  (planillas UEEDA)
    ↓  cargar_postgres.py      lee celda por celda, todo como texto
 Postgres / Supabase  ·  tabla candidaturas       capa cruda
-   ↓  pg_02...pg_08 (histórico) → hoy: pg_01_tabla.sql + pg_08_agregar_id_candidato.sql
+   ↓  pg_02_esquema.sql (tabla, vista, consultas_log, permisos)
 Postgres  ·  v_candidaturas (materializada)      capa semántica
    ↓
 panel/ (Next.js, Vercel)  ──→  Portal público
@@ -425,17 +425,15 @@ exigencia de que los datos no salgan de la infraestructura del organismo.
 
 | Archivo | Qué hace |
 |---|---|
-| `cargar_postgres.py` | Lee el Excel e inserta en Postgres. Crea tabla y vista |
-| `pg_01_tabla.sql` | DDL de la tabla cruda, todas las columnas texto |
-| `pg_08_agregar_id_candidato.sql` | DDL vigente de `v_candidaturas` (capa semántica): tipado, nombres de dominio, `id_candidato`, índices |
+| `cargar_postgres.py` | Lee el Excel e inserta en Postgres. Crea el esquema y refresca la vista |
+| `pg_02_esquema.sql` | Esquema completo vigente, exportado de producción: tabla cruda `candidaturas` (todo texto), `v_candidaturas` (capa semántica: tipado, nombres de dominio, `id_candidato`, índices), `consultas_log` y permisos de la API de Supabase |
 | `diccionario_terminos.md` | Sinónimos, siglas y nombres coloquiales — fuente de `panel/lib/context.ts` |
 | `panel/` | Aplicación Next.js en producción — ver `panel/README.md` para arrancarla localmente |
 | `data/` | Planillas UEEDA de origen. Fuera de git |
 
-*(Las migraciones intermedias `pg_02` a `pg_07` — pasos ya aplicados y
-superados por `pg_08` — se archivaron fuera del repo activo; el esquema
-vigente de `consultas_log` y `v_candidaturas` queda documentado en `pg_01` y
-`pg_08`.)*
+*(Las migraciones históricas `pg_01` a `pg_08` se consolidaron en
+`pg_02_esquema.sql`, que reproduce el esquema tal como está en producción.
+Siguen disponibles en el historial de git.)*
 
 **Puesta en marcha del pipeline de carga:**
 
@@ -448,7 +446,9 @@ python cargar_postgres.py
 Usar la cadena del **session pooler** (puerto 5432): la conexión directa de
 Supabase es IPv6 y no resuelve desde una red IPv4.
 
-Si se recargan los datos: `REFRESH MATERIALIZED VIEW v_candidaturas;`
+Recrear el esquema no borra `consultas_log` (se conserva el historial). Para
+recargar solo los datos: `python cargar_postgres.py --solo-datos` (vacía
+`candidaturas`, recarga y refresca `v_candidaturas`).
 
 Para arrancar la aplicación (`panel/`), ver `panel/README.md`.
 

@@ -13,13 +13,16 @@ del SESSION POOLER (puerto 5432): la conexion directa de Supabase es IPv6 y no
 resuelve desde una red IPv4.
 
     Windows (PowerShell):
-        $env:DATABASE_URL="postgresql://postgres.uywxcspzavewdyvuvcot:TU-PASSWORD@aws-0-sa-east-1.pooler.supabase.com:5432/postgres"
+        $env:DATABASE_URL="postgresql://postgres.XXXXXXXX:TU-PASSWORD@aws-0-sa-east-1.pooler.supabase.com:5432/postgres"
     Linux / macOS:
         export DATABASE_URL="postgresql://..."
 
 Uso:
-    python cargar_postgres.py           # crea tabla, carga, crea vista
-    python cargar_postgres.py --solo-datos
+    python cargar_postgres.py               # crea el esquema, carga y refresca la vista
+    python cargar_postgres.py --solo-datos  # vacia candidaturas, recarga y refresca
+
+El esquema (tablas, vista, indices, permisos) vive en pg_02_esquema.sql.
+Recrear el esquema NO borra consultas_log: el historial se conserva.
 """
 
 import argparse
@@ -32,8 +35,8 @@ RAIZ = Path(__file__).resolve().parent
 ARCHIVO = RAIZ / "data" / "UEEDA Precandidaturas y Candidaturas 2011 2025 v100826.xlsx"
 HOJA = "Sheet1"
 TABLA = "candidaturas"
-SQL_TABLA = RAIZ / "pg_01_tabla.sql"
-SQL_VISTA = RAIZ / "pg_02_vista.sql"
+SQL_ESQUEMA = RAIZ / "pg_02_esquema.sql"
+VISTA = "v_candidaturas"
 
 # Orden EXACTO de columnas del Excel de origen (v100826): las celdas se leen
 # por posicion, no por nombre de encabezado, asi que este orden tiene que
@@ -105,7 +108,7 @@ def leer_excel():
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--solo-datos", action="store_true",
-                    help="No ejecuta pg_01_tabla.sql ni pg_02_vista.sql")
+                    help="No ejecuta pg_02_esquema.sql: solo recarga los datos")
     args = ap.parse_args()
 
     url = os.environ.get("DATABASE_URL")
@@ -125,8 +128,8 @@ def main():
     with psycopg.connect(url) as con:
         with con.cursor() as cur:
             if not args.solo_datos:
-                log("creando tabla")
-                cur.execute(SQL_TABLA.read_text(encoding="utf-8"))
+                log(f"creando esquema ({SQL_ESQUEMA.name})")
+                cur.execute(SQL_ESQUEMA.read_text(encoding="utf-8"))
             else:
                 cur.execute(f"TRUNCATE {TABLA} CASCADE")
 
@@ -144,14 +147,15 @@ def main():
             cur.execute(f"SELECT count(*) FROM {TABLA}")
             log(f"  {cur.fetchone()[0]:,} filas en {TABLA}")
 
-            if not args.solo_datos:
-                log("creando vista")
-                cur.execute(SQL_VISTA.read_text(encoding="utf-8"))
+            # Siempre, tambien con --solo-datos: la vista es materializada y
+            # no se entera sola de los datos nuevos.
+            log(f"refrescando {VISTA}")
+            cur.execute(f"REFRESH MATERIALIZED VIEW {VISTA}")
 
-            cur.execute("""
+            cur.execute(f"""
                 SELECT count(*) AS filas,
                        count(*) FILTER (WHERE id_candidato IS NOT NULL) AS con_id_candidato
-                FROM v_candidaturas
+                FROM {VISTA}
             """)
             filas, con_id = cur.fetchone()
             log(f"  v_candidaturas: {filas:,} filas, {con_id:,} con id_candidato "

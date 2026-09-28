@@ -19,9 +19,8 @@ Documentación completa:
 | Ruta | Qué es |
 |---|---|
 | `panel/` | Aplicación Next.js en producción: chat, validación de SQL, ejecución contra Postgres |
-| `cargar_postgres.py` | Carga las planillas UEEDA (`data/`) a Postgres |
-| `pg_01_tabla.sql` | DDL de la tabla cruda `candidaturas` |
-| `pg_08_agregar_id_candidato.sql` | DDL vigente de la vista semántica `v_candidaturas` |
+| `cargar_postgres.py` | Crea el esquema y carga la planilla UEEDA (`data/`) a Postgres |
+| `pg_02_esquema.sql` | Esquema completo vigente: tabla cruda `candidaturas`, vista `v_candidaturas`, `consultas_log`, índices y permisos |
 | `diccionario_terminos.md` | Diccionario de términos del dominio electoral |
 | `data/` | Planillas UEEDA de origen (fuera de git) |
 
