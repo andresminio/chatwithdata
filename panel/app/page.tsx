@@ -46,6 +46,9 @@ interface RespuestaConsulta {
   truncado?: boolean;
   limite?: number;
   total?: number | null;
+  // true cuando la tabla llegó bien pero falló la redacción del resumen:
+  // habilita el botón "Reintentar resumen" (/api/redactar).
+  resumenFallido?: boolean;
 }
 
 // Render liviano del markdown que devuelve el modelo: **negrita** resaltada
@@ -378,6 +381,7 @@ export default function Home() {
   const [cargando, setCargando] = useState(false);
   const [resultado, setResultado] = useState<RespuestaConsulta | null>(null);
   const [reportado, setReportado] = useState(false);
+  const [reintentandoResumen, setReintentandoResumen] = useState(false);
   const [paginaActual, setPaginaActual] = useState(1);
 
   // Recorrido guiado.
@@ -570,6 +574,39 @@ export default function Home() {
       // si falla el request no revertimos el texto: para quien reportó ya
       // "se envió"; el caso raro de fallo de red se pierde antes que
       // confundir con un botón que vuelve atrás solo.
+    }
+  }
+
+  // Pide de nuevo SOLO el resumen en prosa (la tabla ya está en pantalla).
+  // Si vuelve a fallar, se actualiza el texto y el botón sigue disponible.
+  async function reintentarResumen() {
+    const logId = resultado?.logId;
+    if (reintentandoResumen || logId == null) return;
+    setReintentandoResumen(true);
+    try {
+      const res = await fetch("/api/redactar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logId }),
+      });
+      const data = await res.json();
+      if (typeof data?.respuesta === "string") {
+        setResultado((previo) =>
+          previo && previo.logId === logId
+            ? {
+                ...previo,
+                respuesta: data.respuesta,
+                resumenFallido: Boolean(data.resumenFallido),
+                logId: data.logId ?? previo.logId,
+              }
+            : previo
+        );
+      }
+    } catch {
+      // Falla de red: se deja el mensaje y el botón como estaban, para que
+      // se pueda volver a intentar.
+    } finally {
+      setReintentandoResumen(false);
     }
   }
 
@@ -987,6 +1024,16 @@ export default function Home() {
         <div className="answer-card" id="p-respuesta">
           <div className="label">Respuesta</div>
           <div className="answer-text">{formatearRespuesta(resultado.respuesta)}</div>
+          {resultado.resumenFallido && resultado.logId != null && (
+            <button
+              type="button"
+              className="retry-btn retry-resumen"
+              onClick={reintentarResumen}
+              disabled={reintentandoResumen}
+            >
+              {reintentandoResumen ? "Generando resumen…" : "Reintentar resumen"}
+            </button>
+          )}
           <div className="answer-disclaimer">
             Contenido generado con inteligencia artificial. Verificá la información importante antes de utilizarla.
           </div>
@@ -1694,6 +1741,14 @@ export default function Home() {
         }
         .retry-btn:hover {
           background: #900;
+          color: #fff;
+        }
+        .retry-resumen {
+          border-color: var(--accent);
+          color: var(--accent);
+        }
+        .retry-resumen:hover {
+          background: var(--accent);
           color: #fff;
         }
         .retry-btn:disabled {

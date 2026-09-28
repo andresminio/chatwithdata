@@ -51,6 +51,7 @@ export async function ejecutarSelect(sql: string): Promise<ResultadoConsulta> {
 export type ResultadoLog =
   | "ok"
   | "ok_cache" // respuesta servida desde respuestas_cache, sin llamar a la IA
+  | "ok_resumen_reintentado" // "Reintentar resumen" después de un error_redaccion
   | "fuera_de_alcance"
   | "error_generacion"
   | "error_validacion"
@@ -112,5 +113,26 @@ export async function marcarConsultaReportada(id: number): Promise<boolean> {
   } catch (error) {
     console.error("No se pudo marcar la consulta como reportada:", error);
     return false;
+  }
+}
+
+// Para "Reintentar resumen": devuelve la pregunta y el SQL de una consulta
+// cuya redacción falló. Se leen de consultas_log (los escribió el servidor)
+// en vez de aceptarlos del navegador, para que el endpoint de reintento no
+// pueda usarse para ejecutar un SQL o redactar sobre una pregunta arbitraria.
+export async function obtenerConsultaConResumenFallido(
+  id: number
+): Promise<{ pregunta: string; sql: string } | null> {
+  try {
+    const resultado = await obtenerPool().query<{ pregunta: string; sql: string }>(
+      `SELECT pregunta, sql
+       FROM consultas_log
+       WHERE id = $1 AND alcance = 'error_redaccion' AND sql IS NOT NULL`,
+      [id]
+    );
+    return resultado.rows[0] ?? null;
+  } catch (error) {
+    console.error("No se pudo leer la consulta para reintentar el resumen:", error);
+    return null;
   }
 }

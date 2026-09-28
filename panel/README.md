@@ -40,7 +40,11 @@ Abrir `http://localhost:3000`.
 | `lib/context.ts` | Esquema de `v_candidaturas`, reglas de SQL, casos límite y diccionario de términos — se inyecta como contexto del modelo en cada llamada |
 | `lib/sql-guard.ts` | Valida el SQL que devuelve el modelo antes de ejecutarlo: solo SELECT, solo `v_candidaturas`, sin DDL/DML, fuerza LIMIT. Es la solución definitiva, no un reemplazo temporal de `sqlglot` (que no corre en el runtime de Node/Vercel) |
 | `lib/db.ts` | Ejecuta el SELECT validado en una transacción de solo lectura contra Postgres, con timeout |
-| `app/api/consulta/route.ts` | Endpoint `POST /api/consulta`: pregunta → SQL (Gemini) → validación → ejecución → prosa (Gemini). Registra cada paso en `consultas_log` |
+| `lib/ia.ts` | Lista de modelos de Gemini y rotación cuando uno está saturado o sin cuota (2 intentos por modelo, 5 s entre intentos) |
+| `lib/cache.ts` | Caché de respuestas completas en la tabla `respuestas_cache`, por pregunta normalizada y versión de los prompts |
+| `lib/respuesta.ts` | Prompt y llamada de redacción del resumen, y ejecución del SQL con su total — compartido por `/api/consulta` y `/api/redactar` |
+| `app/api/consulta/route.ts` | Endpoint `POST /api/consulta`: caché → pregunta → SQL (Gemini) → validación → ejecución → prosa (Gemini). Registra cada paso en `consultas_log` |
+| `app/api/redactar/route.ts` | Endpoint del botón "Reintentar resumen": vuelve a pedir solo la redacción de una consulta cuyo resumen falló. Lee pregunta y SQL de `consultas_log`, no del navegador |
 | `app/api/reportar/route.ts` | Endpoint para marcar una respuesta puntual como reportada por el usuario |
 | `app/page.tsx` | UI: input de pregunta (con dictado por voz), chips de filtro (Totales/Listado, distrito, género, cargo, etapa, año), tabla de resultados con descarga a Excel, SQL visible, recorrido guiado de onboarding (tour de pasos) y disclaimer de contenido generado por IA |
 
@@ -49,20 +53,21 @@ Abrir `http://localhost:3000`.
 Según `PROYECTO-chat-with-data.md` (sección 7, Etapas 4 y 5), lo que sigue no
 es "cerrar el piloto" — ya está en producción — sino estos frentes:
 
-1. **Caché de preguntas repetidas.** No existe todavía: cada pregunta dispara
-   dos llamadas al modelo (traducción a SQL + redacción), sin excepción. Es
-   la prioridad de escalabilidad más alta, tanto por costo como porque agota
-   la cuota gratuita del modelo al doble de velocidad.
-2. **Anti-abuso.** No hay Turnstile ni rate limiting propio; el único freno
+1. **Anti-abuso.** No hay Turnstile ni rate limiting propio; el único freno
    hoy es la cuota del proveedor del modelo, que no distingue tráfico
    legítimo de abuso.
-3. **Modelo de mayor poder de razonamiento.** Hoy corre `gemini-3.5-flash-lite`
+2. **Modelo de mayor poder de razonamiento.** Hoy corre `gemini-3.5-flash-lite`
    por límite de cuota del free tier, no por elección de calidad. Requiere
    pasar a un plan pago.
-4. **Rol de Postgres de solo lectura dedicado**, en vez de las credenciales
+3. **Rol de Postgres de solo lectura dedicado**, en vez de las credenciales
    completas del session pooler.
-5. **Ampliación de alcance** (Etapa 5, más grande): sumar candidaturas desde
+4. **Ampliación de alcance** (Etapa 5, más grande): sumar candidaturas desde
    1983 y vincular con la planilla de participación de agrupaciones políticas.
+
+Ya resuelto: **caché de preguntas repetidas** (`respuestas_cache`, ver
+`lib/cache.ts`). Una pregunta ya respondida con los prompts vigentes se sirve
+de la tabla sin llamar al modelo; se invalida sola si cambia un prompt y se
+vacía al recargar los datos.
 
 Lo que **no** está en este roadmap, aunque lo previó una versión anterior del
 proyecto: banco de evaluación formal y ejemplos resueltos (pregunta–SQL) en
@@ -111,5 +116,6 @@ su propio código HTTP y un `logId` para poder correlacionar el caso en
 | Body inválido / falla traducción a SQL / SQL rechazado / falla ejecución | "Ups, no pudimos procesar esta consulta. Probá reformularla." (con `logId`) |
 | Sin pregunta | "Escribí una pregunta para poder ayudarte." |
 | Se agotó la cuota gratuita de la IA | "Estamos recibiendo muchas consultas en este momento (límite del plan gratuito de la IA). Probá de nuevo en unos [N] segundos / en un minuto." — con botón "Reintentar" |
-| Falla la redacción de la respuesta, pero sí hay datos | "Podés ver la información que buscabas a continuación." |
+| IA saturada: fallaron todos los modelos de la lista al traducir a SQL | "En este momento el modelo de IA está experimentando alta demanda. Probá de nuevo más tarde." — con botón "Reintentar" |
+| Falla la redacción del resumen, pero sí hay datos | "No pudimos generar el resumen porque la IA está con alta demanda en este momento. Los resultados de tu consulta están en la tabla de abajo." (o la variante por cuota / genérica) — con botón "Reintentar resumen" |
 | Falla la conexión desde el navegador (fetch) | "No pudimos conectarnos con el servicio. Verificá tu conexión e intentá nuevamente." |

@@ -324,10 +324,9 @@ de prompt.
 ### Etapa 4 — Escalabilidad y mejora del modelo
 No se avanza en orden estricto; son frentes en paralelo:
 
-- **Escalabilidad de tráfico y costo** — caché de preguntas frecuentes (hoy
-  cada pregunta dispara dos llamadas al modelo, sin excepción — ver sección
-  8), anti-abuso (hoy no hay Turnstile ni rate limiting propio), rol de
-  Postgres de solo lectura dedicado.
+- **Escalabilidad de tráfico y costo** — caché de preguntas repetidas (hecha:
+  `respuestas_cache`, ver sección 8), anti-abuso (hoy no hay Turnstile ni rate
+  limiting propio), rol de Postgres de solo lectura dedicado.
 - **Modelo de mayor poder de razonamiento** — hoy corre `gemini-3.5-flash-lite`
   por límite de cuota del free tier (5 RPM / 20 RPD de los Flash completos vs.
   15 RPM / 500 RPD del Lite), no por elección de calidad. Pasar a un plan
@@ -361,23 +360,25 @@ arquitectura; hasta entonces, Postgres sobra. Sumar candidaturas desde 1983
 
 **Tráfico.** Mecanismos, en orden de prioridad para la Etapa 4:
 
-1. **Caché de preguntas repetidas.** Todavía no existe: cada pregunta dispara
-   las dos llamadas al modelo (traducción a SQL + redacción) sin excepción.
-   En un portal temático las preguntas se repiten fuertemente, así que es el
-   mecanismo de mayor impacto tanto en costo como en la cuota gratuita del
-   modelo.
+1. **Caché de preguntas repetidas — hecha.** Tabla `respuestas_cache`
+   (`panel/lib/cache.ts`): una pregunta ya respondida se sirve completa (prosa,
+   SQL y filas) sin llamar al modelo. La clave incluye un hash de los prompts,
+   así que se invalida sola si cambia `context.ts` o el prompt de redacción, y
+   `cargar_postgres.py` la vacía al recargar los datos. Los aciertos quedan en
+   `consultas_log` con `alcance = 'ok_cache'`.
 2. **Anti-abuso.** No hay Turnstile ni límite por origen implementado; el
    único freno hoy es la cuota del proveedor del modelo, que no distingue
    tráfico legítimo de abuso.
 3. **Vistas de resumen precalculadas** para los agregados más pedidos —
    evaluar si hace falta una vez que haya caché.
 
-El costo del modelo escala con las preguntas *distintas*, no con las visitas.
-Esa es la variable a monitorear, y la razón por la que la caché es la
-prioridad 1 de la Etapa 4.
+El costo del modelo escala con las preguntas *distintas*, no con las visitas:
+con la caché, una pregunta repetida ya no consume cuota. Esa es la variable a
+monitorear.
 
 **Modelo de lenguaje.** El proveedor está detrás de una capa de abstracción:
-cambiarlo es una variable de entorno (`GEMINI_MODEL`). Habilita pasar de free
+cambiarlo es una variable de entorno (`GEMINI_MODELS`, lista en orden de
+preferencia; si un modelo está saturado se rota al siguiente — `panel/lib/ia.ts`). Habilita pasar de free
 tier a pago, cambiar a un modelo más capaz si la traducción no alcanza la
 calidad esperada, o migrar a un modelo abierto autoalojado si aparece una
 exigencia de que los datos no salgan de la infraestructura del organismo.
@@ -401,7 +402,7 @@ exigencia de que los datos no salgan de la infraestructura del organismo.
 | Preguntas fuera de alcance respondidas igual | Alto | Encuadre en el prompt; sin métrica automatizada de tasa de rechazo |
 | Uso político de una respuesta | Alto | Neutralidad por diseño del prompt, trazabilidad completa vía `consultas_log` |
 | Sin rol de Postgres de solo lectura dedicado | Alto | Hoy la única defensa es `sql-guard.ts` + `READ ONLY` a nivel de transacción — ver 4.3 |
-| Sin anti-abuso ni caché | Medio-alto | Cuota del proveedor del modelo actúa como freno de hecho, no por diseño — prioridad 1 de la Etapa 4 |
+| Sin anti-abuso | Medio-alto | La caché evita gastar cuota en preguntas repetidas, pero la cuota del proveedor sigue siendo el único freno ante preguntas distintas en masa — Etapa 4 |
 | Costo desbordado por tráfico o abuso | Medio | Ver ítem anterior; pendiente de resolver en la Etapa 4 |
 | Deriva entre el dato de Looker y el del chat | Medio | Mismo archivo de origen; documentar la versión usada |
 | Dependencia de una persona | Medio | Scripts versionados, documentación |
