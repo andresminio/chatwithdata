@@ -1,9 +1,10 @@
-# chatwithdata — portal conversacional sobre datos electorales (UEEDA / CNE)
+# Chat with data — portal conversacional sobre datos electorales
 
 Portal donde cualquier persona puede preguntar en lenguaje natural sobre
 candidaturas electorales argentinas (2011–2025) y recibe una respuesta
-construida a partir de una consulta SQL real sobre los datos oficiales de la
-UEEDA. En producción, en etapa de prueba: **[chatwithdata-phi.vercel.app](https://chatwithdata-phi.vercel.app)**.
+construida a partir de una consulta SQL sobre datos oficiales. 
+
+Piloto: **[chatwithdata-phi.vercel.app](https://chatwithdata-phi.vercel.app)**.
 
 Documentación completa:
 
