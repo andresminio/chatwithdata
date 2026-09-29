@@ -20,6 +20,7 @@ export const maxDuration = 60;
  * calcula completa y ahí sí se cachea.
  */
 export async function POST(req: NextRequest) {
+  const inicio = Date.now();
   let logId: unknown;
   try {
     const body = await req.json();
@@ -51,6 +52,8 @@ export async function POST(req: NextRequest) {
       filas,
       total,
       truncado,
+      // Margen para la base y el log antes de los 60 s de Vercel.
+      limite: inicio + 50_000,
     });
     const nuevoLogId = await registrarConsulta({
       pregunta: consulta.pregunta,

@@ -10,9 +10,17 @@
  *   - 429 / 500 / 503 (cuota, error interno, alta demanda): se reintenta; si
  *     se agotan los intentos, se rota al siguiente modelo. Otro modelo es otro
  *     pool de capacidad en Google, así que insistir con el mismo sirve poco.
+ *   - Timeout: cada intento se corta a los TIMEOUT_INTENTO_MS. Un modelo que
+ *     no contesta a tiempo se trata igual que uno saturado (503).
+ *   - Presupuesto: la rotación completa tiene que terminar antes de `limite`
+ *     (un timestamp). Si no queda tiempo para otro intento, se corta ahí.
+ *     Existe porque Vercel mata la función a los 60 s: sin este tope, un
+ *     Gemini lento hacía que Vercel devolviera su propia página de error
+ *     (504 FUNCTION_INVOCATION_TIMEOUT) en vez de un mensaje de la app.
  *   - Cualquier otro error (400, respuesta que no respeta el esquema, etc.)
  *     no es de disponibilidad: se tira de inmediato, sin rotar.
- *   - Si se agotan TODOS los modelos, se tira ErrorIaNoDisponible.
+ *   - Si se agotan TODOS los modelos, o el presupuesto, se tira
+ *     ErrorIaNoDisponible.
  *
  * Los reintentos propios del SDK se desactivan (maxRetries: 0): de lo
  * contrario cada "intento" de acá serían en realidad 3 llamadas.
@@ -38,11 +46,16 @@ export const MODELOS: string[] = (() => {
 
 const INTENTOS_POR_MODELO = 2;
 const ESPERA_MS = 5000;
+const TIMEOUT_INTENTO_MS = 15_000;
+// Por debajo de esto no vale la pena lanzar otro intento: no llegaría.
+const MINIMO_PARA_INTENTAR_MS = 3_000;
+// Si quien llama no pasa un límite propio.
+const PRESUPUESTO_POR_DEFECTO_MS = 45_000;
 const CODIGOS_REINTENTABLES = new Set([429, 500, 503]);
 
 /** Se agotaron todos los modelos de la lista por errores de disponibilidad. */
 export class ErrorIaNoDisponible extends Error {
-  /** true si todos los fallos fueron por cuota (429). */
+  /** true si todos los fallos fueron por cuota (429); false si hubo 5xx, 404 o timeouts. */
   readonly soloCuota: boolean;
   readonly fallos: string[];
 
@@ -71,18 +84,38 @@ const esperar = (ms: number) => new Promise((resolver) => setTimeout(resolver, m
 
 /**
  * Ejecuta `llamada` con el primer modelo de MODELOS que responda.
- * `llamada` recibe el nombre del modelo y tiene que pasar `maxRetries: 0`
- * al SDK.
+ * `llamada` recibe el nombre del modelo y una señal de cancelación; tiene
+ * que pasarle al SDK `maxRetries: 0` y `abortSignal: signal`.
+ * `limite` es el timestamp (ms) antes del cual tiene que terminar todo.
  */
-export async function conRotacionDeModelos<T>(llamada: (modelo: string) => Promise<T>): Promise<T> {
+export async function conRotacionDeModelos<T>(
+  llamada: (modelo: string, signal: AbortSignal) => Promise<T>,
+  limite: number = Date.now() + PRESUPUESTO_POR_DEFECTO_MS
+): Promise<T> {
   const fallos: string[] = [];
   let soloCuota = true;
 
   for (const modelo of MODELOS) {
     for (let intento = 1; intento <= INTENTOS_POR_MODELO; intento++) {
+      const restante = limite - Date.now();
+      if (restante < MINIMO_PARA_INTENTAR_MS) {
+        fallos.push("sin tiempo para más intentos");
+        throw new ErrorIaNoDisponible(fallos, false);
+      }
+
+      const signal = AbortSignal.timeout(Math.min(TIMEOUT_INTENTO_MS, restante));
       try {
-        return await llamada(modelo);
+        return await llamada(modelo, signal);
       } catch (error) {
+        // Se cortó por tiempo: se trata como modelo saturado.
+        if (signal.aborted) {
+          fallos.push(`${modelo} intento ${intento}: sin respuesta a tiempo`);
+          soloCuota = false;
+          console.warn(`Gemini ${modelo} no respondió a tiempo (intento ${intento}/${INTENTOS_POR_MODELO})`);
+          if (intento < INTENTOS_POR_MODELO) await esperarSiAlcanza(limite);
+          continue;
+        }
+
         const codigo = codigoHttp(error);
 
         if (codigo === 404) {
@@ -99,10 +132,16 @@ export async function conRotacionDeModelos<T>(llamada: (modelo: string) => Promi
         if (codigo !== 429) soloCuota = false;
         console.warn(`Gemini ${modelo} respondió ${codigo} (intento ${intento}/${INTENTOS_POR_MODELO})`);
 
-        if (intento < INTENTOS_POR_MODELO) await esperar(ESPERA_MS);
+        if (intento < INTENTOS_POR_MODELO) await esperarSiAlcanza(limite);
       }
     }
   }
 
   throw new ErrorIaNoDisponible(fallos, soloCuota);
+}
+
+/** Espera ESPERA_MS, pero nunca tanto como para no dejar tiempo a otro intento. */
+async function esperarSiAlcanza(limite: number) {
+  const disponible = limite - Date.now() - MINIMO_PARA_INTENTAR_MS;
+  if (disponible > 0) await esperar(Math.min(ESPERA_MS, disponible));
 }

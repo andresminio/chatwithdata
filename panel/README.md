@@ -40,7 +40,7 @@ Abrir `http://localhost:3000`.
 | `lib/context.ts` | Esquema de `v_candidaturas`, reglas de SQL, casos límite y diccionario de términos — se inyecta como contexto del modelo en cada llamada |
 | `lib/sql-guard.ts` | Valida el SQL que devuelve el modelo antes de ejecutarlo: solo SELECT, solo `v_candidaturas`, sin DDL/DML, fuerza LIMIT. Es la solución definitiva, no un reemplazo temporal de `sqlglot` (que no corre en el runtime de Node/Vercel) |
 | `lib/db.ts` | Ejecuta el SELECT validado en una transacción de solo lectura contra Postgres, con timeout |
-| `lib/ia.ts` | Lista de modelos de Gemini y rotación cuando uno está saturado o sin cuota (2 intentos por modelo, 5 s entre intentos) |
+| `lib/ia.ts` | Lista de modelos de Gemini y rotación cuando uno está saturado, sin cuota o no responde (2 intentos por modelo, 5 s entre intentos, 15 s máximo por intento). Todo tiene que terminar dentro del presupuesto de la pregunta, para no pasar los 60 s de Vercel |
 | `lib/cache.ts` | Caché de respuestas completas en la tabla `respuestas_cache`, por pregunta normalizada y versión de los prompts |
 | `lib/respuesta.ts` | Prompt y llamada de redacción del resumen, y ejecución del SQL con su total — compartido por `/api/consulta` y `/api/redactar` |
 | `app/api/consulta/route.ts` | Endpoint `POST /api/consulta`: caché → pregunta → SQL (Gemini) → validación → ejecución → prosa (Gemini). Registra cada paso en `consultas_log` |

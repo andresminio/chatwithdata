@@ -18,10 +18,14 @@ import {
 // Qué modelo de Gemini se usa, y cómo se rota a otro cuando uno está
 // saturado o sin cuota: ver lib/ia.ts.
 
-// Con la rotación, una pregunta puede tardar bastante más que lo normal en el
-// peor caso (2 modelos x 2 intentos x 5 s de espera, en cada una de las dos
-// llamadas). 60 s es el máximo que Vercel permite sin plan pago.
+// 60 s es el máximo que Vercel permite sin plan pago. Si se pasa, Vercel
+// corta la función y devuelve su propia página de error (504), así que la
+// app reparte el tiempo entre las dos llamadas a la IA y corta antes:
+// la traducción a SQL tiene que terminar antes del segundo 35 y la
+// redacción antes del 52 (lo que queda es margen para la base y el log).
 export const maxDuration = 60;
+const LIMITE_TRADUCCION_MS = 35_000;
+const LIMITE_REDACCION_MS = 52_000;
 
 const esquemaRespuestaModelo = z.object({
   tipo: z.enum(["sql", "fuera_de_alcance"]),
@@ -62,6 +66,7 @@ const esquemaRespuestaModelo = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const inicio = Date.now();
   let pregunta: string;
   try {
     const body = await req.json();
@@ -92,15 +97,18 @@ export async function POST(req: NextRequest) {
   // --- Paso 3-4: encuadre + traducción a SQL en una sola llamada ---------
   let decision: z.infer<typeof esquemaRespuestaModelo>;
   try {
-    const resultado = await conRotacionDeModelos((modelo) =>
-      generateObject({
-        model: google(modelo),
-        schema: esquemaRespuestaModelo,
-        system: construirContextoSistema(),
-        prompt: pregunta,
-        providerOptions: SIN_RAZONAMIENTO_PROFUNDO,
-        maxRetries: 0, // los reintentos los maneja conRotacionDeModelos
-      })
+    const resultado = await conRotacionDeModelos(
+      (modelo, signal) =>
+        generateObject({
+          model: google(modelo),
+          schema: esquemaRespuestaModelo,
+          system: construirContextoSistema(),
+          prompt: pregunta,
+          providerOptions: SIN_RAZONAMIENTO_PROFUNDO,
+          maxRetries: 0, // los reintentos los maneja conRotacionDeModelos
+          abortSignal: signal,
+        }),
+      inicio + LIMITE_TRADUCCION_MS
     );
     decision = resultado.object;
   } catch (error) {
@@ -211,7 +219,14 @@ export async function POST(req: NextRequest) {
   let redaccionFallo = false;
   let errorRedaccion: string | null = null;
   try {
-    respuesta = await redactarRespuesta({ pregunta, sql: validacion.sql, filas, total, truncado });
+    respuesta = await redactarRespuesta({
+      pregunta,
+      sql: validacion.sql,
+      filas,
+      total,
+      truncado,
+      limite: inicio + LIMITE_REDACCION_MS,
+    });
   } catch (error) {
     redaccionFallo = true;
     errorRedaccion = String(error);

@@ -181,17 +181,21 @@ export async function redactarRespuesta({
   filas,
   total,
   truncado,
+  limite,
 }: {
   pregunta: string;
   sql: string;
   filas: Record<string, unknown>[];
   total: number | null;
   truncado: boolean;
+  /** Timestamp (ms) antes del cual tiene que terminar (ver lib/ia.ts). */
+  limite: number;
 }): Promise<string> {
-  const { text } = await conRotacionDeModelos((modelo) =>
+  const { text } = await conRotacionDeModelos((modelo, signal) =>
     generateText({
       model: google(modelo),
       maxRetries: 0, // los reintentos los maneja conRotacionDeModelos
+      abortSignal: signal,
       system: SISTEMA_REDACCION,
       prompt: [
         `Pregunta original: ${pregunta}`,
@@ -213,7 +217,8 @@ export async function redactarRespuesta({
         JSON.stringify(filas.slice(0, LIMITE_FILAS_PARA_REDACCION), null, 2),
       ].join("\n\n"),
       providerOptions: SIN_RAZONAMIENTO_PROFUNDO,
-    })
+    }),
+    limite
   );
   return text;
 }
