@@ -366,6 +366,11 @@ arquitectura; hasta entonces, Postgres sobra. Sumar candidaturas desde 1983
    así que se invalida sola si cambia `context.ts` o el prompt de redacción, y
    `cargar_postgres.py` la vacía al recargar los datos. Los aciertos quedan en
    `consultas_log` con `alcance = 'ok_cache'`.
+   **Excepción: respuestas fijadas** (`fijada = true`) — las combinaciones de
+   los chips de ejemplo, curadas y editadas a mano. Se sirven siempre, sin
+   importar la versión de los prompts, y el loader no las borra: solo las
+   lista para revisarlas. Rehacerlas tras una carga de datos nuevos es un
+   proceso aparte, manual.
 2. **Anti-abuso.** No hay Turnstile ni límite por origen implementado; el
    único freno hoy es la cuota del proveedor del modelo, que no distingue
    tráfico legítimo de abuso.

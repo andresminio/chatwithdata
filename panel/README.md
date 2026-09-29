@@ -41,12 +41,103 @@ Abrir `http://localhost:3000`.
 | `lib/sql-guard.ts` | Valida el SQL que devuelve el modelo antes de ejecutarlo: solo SELECT, solo `v_candidaturas`, sin DDL/DML, fuerza LIMIT. Es la solución definitiva, no un reemplazo temporal de `sqlglot` (que no corre en el runtime de Node/Vercel) |
 | `lib/db.ts` | Ejecuta el SELECT validado en una transacción de solo lectura contra Postgres, con timeout |
 | `lib/ia.ts` | Lista de modelos de Gemini y rotación cuando uno está saturado, sin cuota o no responde (2 intentos por modelo, 5 s entre intentos, 15 s máximo por intento). Todo tiene que terminar dentro del presupuesto de la pregunta, para no pasar los 60 s de Vercel |
-| `lib/cache.ts` | Caché de respuestas completas en la tabla `respuestas_cache`, por pregunta normalizada y versión de los prompts |
+| `lib/cache.ts` | Caché de respuestas completas en la tabla `respuestas_cache`, por pregunta normalizada y versión de los prompts. Las filas con `fijada = true` (las combinaciones de los chips, curadas a mano) se sirven siempre y no se invalidan ni se borran solas |
 | `lib/respuesta.ts` | Prompt y llamada de redacción del resumen, y ejecución del SQL con su total — compartido por `/api/consulta` y `/api/redactar` |
 | `app/api/consulta/route.ts` | Endpoint `POST /api/consulta`: caché → pregunta → SQL (Gemini) → validación → ejecución → prosa (Gemini). Registra cada paso en `consultas_log` |
 | `app/api/redactar/route.ts` | Endpoint del botón "Reintentar resumen": vuelve a pedir solo la redacción de una consulta cuyo resumen falló. Lee pregunta y SQL de `consultas_log`, no del navegador |
 | `app/api/reportar/route.ts` | Endpoint para marcar una respuesta puntual como reportada por el usuario |
 | `app/page.tsx` | UI: input de pregunta (con dictado por voz), chips de filtro (Totales/Listado, distrito, género, cargo, etapa, año), tabla de resultados con descarga a Excel, SQL visible, recorrido guiado de onboarding (tour de pasos) y disclaimer de contenido generado por IA |
+
+## Caché y respuestas curadas
+
+Cada pregunta nueva cuesta dos llamadas a Gemini (traducción a SQL +
+redacción). Como los datos no cambian entre cargas, una pregunta ya
+respondida se guarda en la tabla `respuestas_cache` y la próxima vez se
+devuelve completa (resumen, SQL, explicación y tabla) sin llamar a la IA.
+Hay dos tipos de entradas, con reglas distintas:
+
+| | Respuesta común | Respuesta curada (`fijada = true`) |
+|---|---|---|
+| Qué es | Cualquier pregunta que alguien hizo y salió bien | Las combinaciones de los chips de ejemplo, revisadas y editadas a mano |
+| Cómo se crea | Sola, la primera vez que se responde bien | Se marca a mano (`UPDATE ... SET fijada = true`) |
+| Si cambia un prompt (`context.ts` o el de redacción) | Deja de usarse: la próxima vez se genera de nuevo con el prompt nuevo | **Se sigue sirviendo igual** |
+| Si se recargan los datos (`cargar_postgres.py`) | Se borra | **Se conserva**; el loader la lista para revisarla |
+| Prioridad | — | Gana siempre sobre una común de la misma pregunta |
+
+Nunca se guardan errores, respuestas "fuera de alcance" ni respuestas cuyo
+resumen falló.
+
+### Ejemplo: qué pasa con un chip
+
+1. Alguien toca "Paridad de género" y después "Totales" → "Por distrito".
+2. El panel arma el texto de la pregunta (la del chip más las instrucciones de
+   los subchips) y lo manda a `/api/consulta`.
+3. `lib/cache.ts` normaliza ese texto (minúsculas, sin espacios de más ni ¿?
+   en los extremos) y busca:
+   - primero una **fijada** con esa pregunta, sin importar la versión de los
+     prompts;
+   - si no hay, una **común** con esa pregunta y la versión actual de los
+     prompts (la clave es un hash de pregunta + versión).
+4. Si encuentra, responde al instante y registra la consulta en
+   `consultas_log` con `alcance = 'ok_cache'`. Si no, sigue el recorrido
+   normal con la IA y guarda el resultado como respuesta común.
+
+### Combinaciones incoherentes de los chips
+
+Algunos subchips contradicen la pregunta del chip: por ejemplo "Diputados
+Nacionales 2025" + Listado → "Presidente y Vice", o cualquier chip de 2025 +
+"PASO" (en 2025 no hubo PASO). Esas 13 combinaciones están en
+`COMBINACIONES_INCOHERENTES` (`app/page.tsx`) y **nunca llegan a la API**: el
+panel muestra una aclaración fija con dos párrafos (por qué no se puede, y
+qué se muestra en su lugar), desmarca el subchip contradictorio y consulta la
+versión coherente, que es una respuesta curada. Si se agrega un chip nuevo,
+hay que revisar qué subchips lo contradicen y sumarlos ahí.
+
+### Editar una respuesta curada
+
+En Supabase: Table Editor → `respuestas_cache` → filtro `fijada = true`. O
+con SQL:
+
+```sql
+-- Ver las curadas (las más usadas primero)
+SELECT pregunta, respuesta, usos
+FROM respuestas_cache
+WHERE fijada
+ORDER BY usos DESC;
+
+-- Corregir el resumen de una
+UPDATE respuestas_cache
+SET respuesta = 'Texto corregido. Se puede usar **negrita** y listas con "- ".'
+WHERE fijada
+  AND pregunta = 'cuál es la edad promedio de los candidatos por cargo';
+```
+
+La columna `pregunta` está normalizada (minúsculas, sin ¿? en los extremos).
+Editar solo `respuesta` y `explicacion_sql`: `filas` y `sql` tienen que seguir
+coincidiendo entre sí y con la base, porque el SQL visible es lo que hace
+auditable el dato.
+
+### Curar una respuesta nueva
+
+1. Hacer la pregunta en el panel (con los chips o escrita) hasta que la
+   respuesta sea correcta: eso la guarda como común.
+2. Marcarla como fijada:
+   ```sql
+   UPDATE respuestas_cache
+   SET fijada = true
+   WHERE pregunta = '...texto normalizado...';
+   ```
+3. Si hubiera más de una fijada para la misma pregunta, se sirve la más
+   reciente.
+
+### Después de cargar datos nuevos
+
+`cargar_postgres.py` borra las respuestas comunes y conserva las curadas,
+pero **no sabe si siguieron siendo correctas**: al terminar lista todas las
+fijadas para revisarlas. Rehacerlas es un proceso manual y aparte: para cada
+una que haya quedado desactualizada, borrarla
+(`DELETE FROM respuestas_cache WHERE fijada AND pregunta = '...'`), volver a
+hacer la pregunta en el panel y fijarla de nuevo.
 
 ## Pendiente
 
@@ -64,10 +155,8 @@ es "cerrar el piloto" — ya está en producción — sino estos frentes:
 4. **Ampliación de alcance** (Etapa 5, más grande): sumar candidaturas desde
    1983 y vincular con la planilla de participación de agrupaciones políticas.
 
-Ya resuelto: **caché de preguntas repetidas** (`respuestas_cache`, ver
-`lib/cache.ts`). Una pregunta ya respondida con los prompts vigentes se sirve
-de la tabla sin llamar al modelo; se invalida sola si cambia un prompt y se
-vacía al recargar los datos.
+Ya resuelto: **caché de preguntas repetidas**, con respuestas curadas para
+los chips de ejemplo — ver "Caché y respuestas curadas" más arriba.
 
 Lo que **no** está en este roadmap, aunque lo previó una versión anterior del
 proyecto: banco de evaluación formal y ejemplos resueltos (pregunta–SQL) en

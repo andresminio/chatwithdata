@@ -105,6 +105,33 @@ def leer_excel():
     return datos
 
 
+def limpiar_cache(cur):
+    cur.execute("SELECT to_regclass('public.respuestas_cache') IS NOT NULL")
+    if not cur.fetchone()[0]:
+        return
+    cur.execute("""
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'respuestas_cache'
+            AND column_name = 'fijada'
+        )
+    """)
+    if not cur.fetchone()[0]:
+        log("vaciando respuestas_cache")
+        cur.execute("TRUNCATE respuestas_cache")
+        return
+
+    cur.execute("DELETE FROM respuestas_cache WHERE NOT fijada")
+    log(f"respuestas_cache: {cur.rowcount:,} respuestas comunes borradas")
+    cur.execute("SELECT pregunta FROM respuestas_cache WHERE fijada ORDER BY pregunta")
+    fijadas = [f[0] for f in cur.fetchall()]
+    if fijadas:
+        log(f"  ATENCION: se conservan {len(fijadas)} respuestas fijadas. Pueden haber")
+        log("  quedado desactualizadas con los datos nuevos; revisalas y rehacelas a mano:")
+        for pregunta in fijadas:
+            log(f"    - {pregunta[:110]}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--solo-datos", action="store_true",
@@ -153,15 +180,10 @@ def main():
             cur.execute(f"REFRESH MATERIALIZED VIEW {VISTA}")
 
             # Datos nuevos => las respuestas cacheadas del panel pueden estar
-            # desactualizadas. Se vacia la cache (si la tabla existe).
-            log("vaciando respuestas_cache")
-            cur.execute("""
-                DO $$ BEGIN
-                  IF to_regclass('public.respuestas_cache') IS NOT NULL THEN
-                    TRUNCATE respuestas_cache;
-                  END IF;
-                END $$
-            """)
+            # desactualizadas. Se borran las comunes; las fijadas (curadas a
+            # mano, p. ej. las de los chips) se conservan y se listan para
+            # revisarlas contra los datos nuevos.
+            limpiar_cache(cur)
 
             cur.execute(f"""
                 SELECT count(*) AS filas,
