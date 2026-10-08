@@ -118,7 +118,7 @@ function formatearRespuesta(texto: string) {
 const EJEMPLOS = [
   {
     etiqueta: "Diputados Nacionales 2025",
-    pregunta: "¿Quiénes fueron los candidatos a Diputados Nacionales en 2025?",
+    pregunta: "¿Qué candidaturas se presentaron para Diputados Nacionales en las elecciones de 2025?",
   },
   {
     etiqueta: "Paridad de género",
@@ -221,7 +221,7 @@ const DISTRITOS = [
   { valor: "MENDOZA", etiqueta: "Mendoza" },
   { valor: "MISIONES", etiqueta: "Misiones" },
   { valor: "NEUQUÉN", etiqueta: "Neuquén" },
-  { valor: "RÍO NEGRO", etiqueta: "Río Negro" },
+  { valor: "RIO NEGRO", etiqueta: "Río Negro" },
   { valor: "SALTA", etiqueta: "Salta" },
   { valor: "SAN JUAN", etiqueta: "San Juan" },
   { valor: "SAN LUIS", etiqueta: "San Luis" },
