@@ -199,6 +199,31 @@ const ETAPAS = ["PASO", "Generales"];
 const ANIOS = ["2011", "2013", "2015", "2017", "2019", "2021", "2023", "2025"];
 const ANIOS_SIN_PASO = new Set(["2025"]);
 
+// Años con elección presidencial (ver CASOS_LIMITE en lib/context.ts): con
+// Presidente y Vice como único cargo, los demás años no se ofrecen.
+const ANIOS_PRESIDENCIALES = new Set(["2011", "2015", "2019", "2023"]);
+
+// Distritos que renuevan Senadores en cada año electoral. El Senado se
+// renueva por tercios cada dos años, así que el ciclo se repite cada 6 años
+// (verificado contra la planilla UEEDA 2011–2025). Con Senadores como único
+// cargo, se usa para no ofrecer un año y un distrito que juntos no tienen
+// candidaturas. Los valores son los exactos de la columna distrito.
+const TERCIO_1 = ["BUENOS AIRES", "FORMOSA", "JUJUY", "LA RIOJA", "MISIONES", "SAN JUAN", "SAN LUIS", "SANTA CRUZ"];
+const TERCIO_2 = ["CAPITAL FEDERAL", "CHACO", "ENTRE RÍOS", "NEUQUÉN", "RIO NEGRO", "S DEL ESTERO", "SALTA", "T DEL FUEGO"];
+const TERCIO_3 = ["CATAMARCA", "CHUBUT", "CORRIENTES", "CÓRDOBA", "LA PAMPA", "MENDOZA", "SANTA FE", "TUCUMÁN"];
+const SENADORES_POR_ANIO: Record<string, string[]> = {
+  "2011": TERCIO_1, "2017": TERCIO_1, "2023": TERCIO_1,
+  "2013": TERCIO_2, "2019": TERCIO_2, "2025": TERCIO_2,
+  "2015": TERCIO_3, "2021": TERCIO_3,
+};
+
+// Chips de cargo del modo Listado y su valor exacto en la columna cargo.
+const CARGOS_LISTADO: Record<string, string> = {
+  "Presidente y Vice": "PRESIDENTE Y VICE",
+  Diputados: "DIPUTADOS NACIONALES",
+  Senadores: "SENADORES NACIONALES",
+};
+
 // Valores exactos de la columna distrito (ver DICCIONARIO_TERMINOS en
 // lib/context.ts): 24 provincias + DISTRITO ÚNICO. Se deja afuera DISTRITO
 // ÚNICO acá porque no es una provincia elegible por el usuario, es la
@@ -679,6 +704,53 @@ export default function Home() {
     return nivel1Activo === "Totales" ? etapasActivas.includes(etapa) : subfiltrosActivos.includes(etapa);
   }
 
+  // Cargo elegido, si es uno solo (unificado entre modos: en Listado son
+  // chips directos; en Totales es el valor elegido bajo "Por cargo"). Las
+  // reglas de Senadores y Presidente solo aplican cuando ese es el único
+  // cargo: con dos cargos a la vez, siempre hay datos para el otro.
+  function cargoUnico(): string | null {
+    if (nivel1Activo === "Totales") return cargoActivo;
+    const elegidos = Object.keys(CARGOS_LISTADO).filter((l) => subfiltrosActivos.includes(l));
+    return elegidos.length === 1 ? CARGOS_LISTADO[elegidos[0]] : null;
+  }
+  const soloSenadores = cargoUnico() === "SENADORES NACIONALES";
+  const soloPresidente = cargoUnico() === "PRESIDENTE Y VICE";
+
+  // ¿Este cargo, elegido como único, no tendría datos con el año y el
+  // distrito ya elegidos? Se usa para no ofrecerlo (mismo criterio que PASO
+  // con los años sin PASO).
+  function cargoSinDatos(valor: string): boolean {
+    if (valor === "PRESIDENTE Y VICE") {
+      return (!!anioActivo && !ANIOS_PRESIDENCIALES.has(anioActivo)) || !!distritoActivo;
+    }
+    if (valor === "SENADORES NACIONALES") {
+      return !!anioActivo && !!distritoActivo && !SENADORES_POR_ANIO[anioActivo]?.includes(distritoActivo);
+    }
+    return false;
+  }
+
+  // Red de seguridad: si una combinación sin datos igual queda armada (por
+  // ejemplo, había Diputados + Senadores con año y distrito, y se apaga
+  // Diputados), se desmarca lo que sobra en vez de mandar una consulta vacía.
+  useEffect(() => {
+    if (
+      soloSenadores &&
+      anioActivo &&
+      distritoActivo &&
+      !SENADORES_POR_ANIO[anioActivo]?.includes(distritoActivo)
+    ) {
+      setDistritoActivo(null);
+    }
+    if (soloPresidente) {
+      if (anioActivo && !ANIOS_PRESIDENCIALES.has(anioActivo)) setAnioActivo(null);
+      // Presidente solo existe en DISTRITO ÚNICO: no hay provincia que elegir.
+      if (distritoActivo) setDistritoActivo(null);
+      if (subfiltrosActivos.some((l) => l === "Por distrito" || l === ELEGIR_DISTRITO)) {
+        setSubfiltrosActivos((actuales) => actuales.filter((l) => l !== "Por distrito" && l !== ELEGIR_DISTRITO));
+      }
+    }
+  }, [soloSenadores, soloPresidente, anioActivo, distritoActivo, subfiltrosActivos]);
+
   async function consultar() {
     const base = pregunta.trim();
     if (!base) return;
@@ -871,6 +943,20 @@ export default function Home() {
                       !subfiltrosActivos.includes("Generales")
                     )
                 )
+                // Presidente y Vice como único cargo: no ofrecer distrito (solo
+                // existe en DISTRITO ÚNICO).
+                .filter((f) => !(soloPresidente && (f.label === "Por distrito" || f.label === ELEGIR_DISTRITO)))
+                // Un chip de cargo que, como único cargo, no tendría datos con
+                // el año y el distrito ya elegidos (ver cargoSinDatos).
+                .filter(
+                  (f) =>
+                    !(
+                      f.label in CARGOS_LISTADO &&
+                      !subfiltrosActivos.includes(f.label) &&
+                      !Object.keys(CARGOS_LISTADO).some((l) => subfiltrosActivos.includes(l)) &&
+                      cargoSinDatos(CARGOS_LISTADO[f.label])
+                    )
+                )
                 .map((f) => (
                   <button
                     key={f.label}
@@ -899,6 +985,14 @@ export default function Home() {
                 (anio) =>
                   !(etapaEstaActiva("PASO") && !etapaEstaActiva("Generales") && ANIOS_SIN_PASO.has(anio))
               )
+              // Senadores como único cargo y un distrito elegido: solo los
+              // años en que ese distrito renovó Senadores.
+              .filter(
+                (anio) =>
+                  !(soloSenadores && distritoActivo && !SENADORES_POR_ANIO[anio]?.includes(distritoActivo))
+              )
+              // Presidente y Vice como único cargo: solo años con elección presidencial.
+              .filter((anio) => !(soloPresidente && !ANIOS_PRESIDENCIALES.has(anio)))
               .map((anio) => (
                 <button
                   key={anio}
@@ -918,7 +1012,14 @@ export default function Home() {
         <div className="chips-sub-wrap">
           <span className="chips-sub-label">Elegí un distrito</span>
           <div className="chips chips-sub">
-            {DISTRITOS.map((distrito) => (
+            {DISTRITOS
+              // Senadores como único cargo y un año elegido: solo los
+              // distritos que renovaron Senadores ese año.
+              .filter(
+                (distrito) =>
+                  !(soloSenadores && anioActivo && !SENADORES_POR_ANIO[anioActivo]?.includes(distrito.valor))
+              )
+              .map((distrito) => (
               <button
                 key={distrito.valor}
                 className={`chip${distritoActivo === distrito.valor ? " chip-activo" : ""}`}
@@ -954,7 +1055,11 @@ export default function Home() {
         <div className="chips-sub-wrap">
           <span className="chips-sub-label">Elegí un cargo</span>
           <div className="chips chips-sub">
-            {CARGOS.map((cargo) => (
+            {CARGOS
+              // No ofrecer un cargo que no tendría datos con el año y el
+              // distrito ya elegidos (ver cargoSinDatos).
+              .filter((cargo) => cargoActivo === cargo.valor || !cargoSinDatos(cargo.valor))
+              .map((cargo) => (
               <button
                 key={cargo.valor}
                 className={`chip${cargoActivo === cargo.valor ? " chip-activo" : ""}`}
