@@ -14,12 +14,21 @@ import { versionDePrompts } from "@/lib/cache";
 
 const LIMITE_FILAS_PARA_REDACCION = 50;
 
-// Ninguno de los dos pasos necesita razonamiento profundo: traducir a SQL es
-// una tarea acotada (esquema fijo, una sola tabla) y redactar es transcribir
-// filas ya calculadas. "minimal" es lo que más achica la latencia percibida
-// con Gemini 3.x, que por default piensa en nivel "medium".
+// Traducir a SQL es una tarea acotada (esquema fijo, una sola tabla) y con
+// "minimal" funciona bien: es lo que más achica la latencia con Gemini 3.x,
+// que por default piensa en nivel "medium". Se usa en /api/consulta.
 export const SIN_RAZONAMIENTO_PROFUNDO = {
   google: { thinkingConfig: { thinkingLevel: "minimal" as const } },
+};
+
+// La redacción sí necesita razonar: tiene que contrastar las filas contra el
+// SQL ejecutado y contra una lista cerrada de hechos del calendario, con
+// muchas reglas condicionales. Con "minimal" daba respuestas sin cifras y
+// motivos inventados para resultados vacíos (auditoría de chips, 2026-10-08).
+// Tiene margen de tiempo: la traducción termina en ~3 s y la redacción puede
+// llegar hasta el segundo 52 (ver LIMITE_REDACCION_MS en route.ts).
+const RAZONAMIENTO_REDACCION = {
+  google: { thinkingConfig: { thinkingLevel: "medium" as const } },
 };
 
 // Instrucciones de la segunda llamada (redacción de la respuesta a partir
@@ -234,7 +243,7 @@ export async function redactarRespuesta({
         `Muestra de esas filas para que redactes (son ${Math.min(LIMITE_FILAS_PARA_REDACCION, filas.length)} de las ${filas.length} que el usuario ve en la tabla, no la cantidad total):`,
         JSON.stringify(filas.slice(0, LIMITE_FILAS_PARA_REDACCION), null, 2),
       ].join("\n\n"),
-      providerOptions: SIN_RAZONAMIENTO_PROFUNDO,
+      providerOptions: RAZONAMIENTO_REDACCION,
     }),
     limite
   );
