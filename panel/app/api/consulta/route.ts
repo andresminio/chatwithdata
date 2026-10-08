@@ -11,7 +11,7 @@ import {
   ejecutarConTotal,
   mensajeResumenFallido,
   redactarRespuesta,
-  SIN_RAZONAMIENTO_PROFUNDO,
+  RAZONAMIENTO_TRADUCCION,
   VERSION_PROMPTS,
 } from "@/lib/respuesta";
 
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
           schema: esquemaRespuestaModelo,
           system: construirContextoSistema(),
           prompt: pregunta,
-          providerOptions: SIN_RAZONAMIENTO_PROFUNDO,
+          providerOptions: RAZONAMIENTO_TRADUCCION,
           maxRetries: 0, // los reintentos los maneja conRotacionDeModelos
           abortSignal: signal,
         }),

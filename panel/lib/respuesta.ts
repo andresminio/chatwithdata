@@ -14,11 +14,13 @@ import { versionDePrompts } from "@/lib/cache";
 
 const LIMITE_FILAS_PARA_REDACCION = 50;
 
-// Traducir a SQL es una tarea acotada (esquema fijo, una sola tabla) y con
-// "minimal" funciona bien: es lo que más achica la latencia con Gemini 3.x,
-// que por default piensa en nivel "medium". Se usa en /api/consulta.
-export const SIN_RAZONAMIENTO_PROFUNDO = {
-  google: { thinkingConfig: { thinkingLevel: "minimal" as const } },
+// Traducir a SQL es una tarea acotada (esquema fijo, una sola tabla), pero
+// con "minimal" no seguía las reglas condicionales de los filtros del panel
+// (modo Listado con rankings o promedios, desgloses que no aplican): ver
+// auditoría de chips, 2026-10-08. "low" agrega poco tiempo y la traducción
+// tiene margen hasta el segundo 35. Se usa en /api/consulta.
+export const RAZONAMIENTO_TRADUCCION = {
+  google: { thinkingConfig: { thinkingLevel: "low" as const } },
 };
 
 // La redacción sí necesita razonar: tiene que contrastar las filas contra el
@@ -50,7 +52,8 @@ const SISTEMA_REDACCION =
   "entre paréntesis al final), decilo en una frase al empezar, por ejemplo: 'Aunque la " +
   "pregunta menciona 2025, los datos corresponden a 2023, el año elegido en los filtros.' " +
   "FILAS VACÍAS: solo si te paso 0 filas. Si hay al menos una fila, NUNCA digas que las " +
-  "filas están vacías ni que faltan datos. Con 0 filas, explicá el motivo SOLO si coincide " +
+  "filas están vacías ni que faltan datos. Con 0 filas no se muestra ninguna tabla: no " +
+  "remitas a la tabla ni escribas 'el detalle está en la tabla debajo'. Con 0 filas, explicá el motivo SOLO si coincide " +
   "con uno de estos hechos, contrastándolo con los filtros del SQL ejecutado: no hubo PASO " +
   "en 2025 (ese año solo hubo Generales); Parlamentarios del Mercosur solo se eligieron en " +
   "2015 y 2023; Presidente y Vice solo en 2011, 2015, 2019 y 2023; segunda vuelta solo en " +
@@ -130,7 +133,7 @@ const SISTEMA_REDACCION =
   "por una sola etapa (ej. WHERE etapa = 'PASO'), no digas 'varias etapas'; si la " +
   "consulta cuenta listas y no distingue subcategoria, no menciones titulares y " +
   "suplentes, porque esa distinción no aplica a lo que se está contando. Si el prompt " +
-  "indica 'Resultados truncados: no', esas filas están completas en la tabla: decilo " +
+  "indica 'Resultados truncados: no' y hay al menos una fila, esas filas están completas en la tabla: decilo " +
   "con una frase genérica como 'El detalle completo está en la tabla debajo', sin " +
   "inventar de qué está desglosado (por distrito, por cargo, etc.) salvo que eso sea " +
   "visible en las columnas de las filas que te paso. Si indica 'Resultados truncados: " +
