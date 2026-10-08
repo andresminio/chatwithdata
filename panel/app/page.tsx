@@ -403,6 +403,8 @@ export default function Home() {
   const [generoActivo, setGeneroActivo] = useState<string | null>(null);
   const [cargoActivo, setCargoActivo] = useState<string | null>(null);
   const [etapasActivas, setEtapasActivas] = useState<string[]>([]);
+  // Se tocó "Preguntar" con filtros elegidos pero sin pregunta escrita.
+  const [avisoSinPregunta, setAvisoSinPregunta] = useState(false);
   const [cargando, setCargando] = useState(false);
   const [resultado, setResultado] = useState<RespuestaConsulta | null>(null);
   const [reportado, setReportado] = useState(false);
@@ -418,6 +420,7 @@ export default function Home() {
   const preguntaAntesDelTourRef = useRef("");
   const resultadoEraDemoRef = useRef(false);
   const spotlightRef = useRef<HTMLDivElement | null>(null);
+  const inputPreguntaRef = useRef<HTMLInputElement | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const elConEspacioExtraRef = useRef<HTMLElement | null>(null);
 
@@ -751,9 +754,32 @@ export default function Home() {
     }
   }, [soloSenadores, soloPresidente, anioActivo, distritoActivo, subfiltrosActivos]);
 
+  // "Limpiar filtros": apaga el modo y todo lo que cuelga de él, y vuelven
+  // las preguntas de ejemplo si el campo está vacío.
+  function limpiarFiltros() {
+    setNivel1Activo(null);
+    setSubfiltrosActivos([]);
+    setAnioActivo(null);
+    setDistritoActivo(null);
+    setGeneroActivo(null);
+    setCargoActivo(null);
+    setEtapasActivas([]);
+    setAvisoSinPregunta(false);
+  }
+
   async function consultar() {
     const base = pregunta.trim();
-    if (!base) return;
+    if (!base) {
+      // Con filtros elegidos y el campo vacío (por ejemplo, se borró la
+      // pregunta para reescribirla), los filtros se mantienen y se avisa
+      // que falta escribir la pregunta.
+      if (nivel1Activo) {
+        setAvisoSinPregunta(true);
+        inputPreguntaRef.current?.focus();
+      }
+      return;
+    }
+    setAvisoSinPregunta(false);
     const filtro1 = NIVEL1.find((f) => f.label === nivel1Activo);
     const opciones = nivel1Activo ? SUBFILTROS[nivel1Activo] : [];
     // "Por distrito", "Por género" y "Por cargo" son segmentación (desglose)
@@ -860,8 +886,12 @@ export default function Home() {
 
       <div className={`search-card${cargando || simularPensandoTour ? " pensando" : ""}`} id="p-buscador">
         <input
+          ref={inputPreguntaRef}
           value={pregunta}
-          onChange={(e) => setPregunta(e.target.value)}
+          onChange={(e) => {
+            setPregunta(e.target.value);
+            setAvisoSinPregunta(false);
+          }}
           onKeyDown={(e) => e.key === "Enter" && consultar()}
           placeholder="¿Qué te gustaría saber sobre las candidaturas?"
         />
@@ -917,7 +947,19 @@ export default function Home() {
         </div>
 
         <div className={`chips-capa${mostrarEjemplos ? " oculta" : " visible"}`} id="p-chips-filtro">
-          <p className="chips-anuncio">Podés segmentar por</p>
+          <div className="chips-encabezado">
+            <p className="chips-anuncio">Podés segmentar por</p>
+            {nivel1Activo && (
+              <button type="button" className="limpiar-filtros" onClick={limpiarFiltros} disabled={cargando}>
+                ✕ Limpiar filtros
+              </button>
+            )}
+          </div>
+          {avisoSinPregunta && nivel1Activo && !pregunta.trim() && (
+            <p className="aviso-sin-pregunta" role="status">
+              Escribí tu pregunta y se va a responder con estos filtros.
+            </p>
+          )}
           <div className="chips">
             {NIVEL1.filter((f) => !nivel1Activo || f.label === nivel1Activo).map((f) => (
               <button
@@ -1755,6 +1797,32 @@ export default function Home() {
           font-weight: 600;
           color: var(--ink-soft);
           margin: 0;
+        }
+        .chips-encabezado {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 12px;
+        }
+        .limpiar-filtros {
+          background: none;
+          border: none;
+          padding: 0;
+          font-size: 12px;
+          font-weight: 600;
+          color: var(--accent);
+          cursor: pointer;
+        }
+        .limpiar-filtros:hover {
+          text-decoration: underline;
+        }
+        .aviso-sin-pregunta {
+          margin: 0;
+          padding: 8px 12px;
+          border-radius: 8px;
+          font-size: 13px;
+          color: var(--accent-profundo);
+          background: var(--accent-soft);
         }
         .chips-fila {
           display: flex;
