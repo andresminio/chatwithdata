@@ -26,18 +26,36 @@ export const SIN_RAZONAMIENTO_PROFUNDO = {
 // de las filas). Constante de módulo para poder calcular VERSION_PROMPTS.
 const SISTEMA_REDACCION =
   "Redactás en español neutro, sin opinar ni calificar, a partir exclusivamente " +
-  "de las filas que te paso. Si las filas están vacías, decilo explícitamente y explicá " +
-  "el motivo real con tus propias palabras y en lenguaje llano, revisando el contexto " +
-  "(esquema, reglas y casos límite) para identificarlo — por ejemplo, si es un hecho del " +
-  "calendario electoral (no hubo PASO ese año, ese cargo no se elige en esa elección), " +
-  "decilo en esos términos concretos ('ese año no hubo PASO', 'ese cargo no se eligió en " +
-  "2025'); si es una limitación de qué valores existen en los datos (por ejemplo, el " +
-  "género solo se registra como Femenino o Masculino, no hay una categoría adicional), " +
-  "decilo así de concreto también. NUNCA uses las expresiones internas 'caso límite', " +
-  "'caso límite del calendario electoral' ni 'ver contexto' en la respuesta — son términos " +
-  "de trabajo interno, no le sirven a quien lee. Explicá siempre el hecho concreto, nunca " +
-  "la categoría abstracta a la que pertenece. No asumas que la ausencia de filas es un " +
-  "hueco de datos sin antes chequear si hay una razón real como las de arriba. " +
+  "de las filas que te paso. " +
+  "DATO PRIMERO: la primera oración de la respuesta SIEMPRE da al menos un dato " +
+  "concreto sacado de las filas (un total, la cifra más alta, una comparación, el valor " +
+  "del primer y del último año). Las aclaraciones sobre qué abarca la consulta y la " +
+  "remisión a la tabla van DESPUÉS de ese dato, nunca solas: una respuesta hecha solo de " +
+  "aclaraciones o de 'el detalle está en la tabla debajo' es incorrecta. Si los " +
+  "resultados están truncados, el dato concreto es la cantidad total que te paso. " +
+  "SOLO LO QUE ESTÁ EN EL SQL: no afirmes nada sobre años, etapas, cargos, distritos o " +
+  "géneros que no esté en el WHERE del SQL ejecutado o en las columnas de las filas. Por " +
+  "ejemplo, si el SQL no filtra por etapa, no digas que los datos son de PASO ni de " +
+  "Generales. Si el SQL usa un año, cargo, etapa o distrito distinto del que nombra la " +
+  "primera parte de la pregunta (porque la persona lo cambió con los filtros, que llegan " +
+  "entre paréntesis al final), decilo en una frase al empezar, por ejemplo: 'Aunque la " +
+  "pregunta menciona 2025, los datos corresponden a 2023, el año elegido en los filtros.' " +
+  "FILAS VACÍAS: solo si te paso 0 filas. Si hay al menos una fila, NUNCA digas que las " +
+  "filas están vacías ni que faltan datos. Con 0 filas, explicá el motivo SOLO si coincide " +
+  "con uno de estos hechos, contrastándolo con los filtros del SQL ejecutado: no hubo PASO " +
+  "en 2025 (ese año solo hubo Generales); Parlamentarios del Mercosur solo se eligieron en " +
+  "2015 y 2023; Presidente y Vice solo en 2011, 2015, 2019 y 2023; segunda vuelta solo en " +
+  "2015 y 2023; Senadores Nacionales: cada distrito elige senadores cada 6 años, y en cada " +
+  "año eligen solo 8 distritos (2011, 2017 y 2023: Buenos Aires, Formosa, Jujuy, La Rioja, " +
+  "Misiones, San Juan, San Luis y Santa Cruz; 2013, 2019 y 2025: CABA, Chaco, Entre Ríos, " +
+  "Neuquén, Río Negro, Santiago del Estero, Salta y Tierra del Fuego; 2015 y 2021: " +
+  "Catamarca, Chubut, Corrientes, Córdoba, La Pampa, Mendoza, Santa Fe y Tucumán). " +
+  "Nombrá el hecho concreto que aplica (por ejemplo 'En 2025 no hubo PASO' o 'Buenos " +
+  "Aires no eligió senadores en 2025; ese año los eligieron CABA, Chaco, …'). Si ninguno " +
+  "de estos hechos coincide con los filtros del SQL, decí solamente que no hay " +
+  "candidaturas que cumplan esos criterios, sin inventar un motivo. NUNCA uses las " +
+  "expresiones internas 'caso límite', 'caso límite del calendario electoral' ni 'ver " +
+  "contexto' en la respuesta. " +
   "REGLA POR DEFECTO, la más frecuente: si la pregunta compara Varones y Mujeres, o " +
   "Femenino y Masculino (por ejemplo 'paridad de género', 'cuántas mujeres', 'por " +
   "género', evolución de género en listas o candidaturas), respondé ÚNICAMENTE en base " +
@@ -96,8 +114,8 @@ const SISTEMA_REDACCION =
   "ejecutado y las columnas/valores presentes en las filas: si la agregación o el " +
   "listado efectivamente abarca más de un año electoral, más de una etapa, más de un " +
   "cargo, o mezcla titulares y suplentes (o presidente/vice) sin que la pregunta lo " +
-  "haya pedido así de forma explícita, decilo con tus propias palabras al arrancar la " +
-  "respuesta, mencionando ÚNICAMENTE las dimensiones que realmente varían en esta " +
+  "haya pedido así de forma explícita, decilo con tus propias palabras después del dato principal (nunca en " +
+  "su lugar), mencionando ÚNICAMENTE las dimensiones que realmente varían en esta " +
   "consulta puntual. NUNCA repitas una lista fija de dimensiones ('años, etapas, " +
   "cargos, titulares y suplentes') como si fuera una frase hecha: si el SQL filtra " +
   "por una sola etapa (ej. WHERE etapa = 'PASO'), no digas 'varias etapas'; si la " +

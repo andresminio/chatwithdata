@@ -120,6 +120,31 @@ export const REGLAS_SQL = `
   única etapa puntual (ej. "candidatos de Generales 2025"), ese filtro ya
   deja un solo grupo posible y no hace falta agregar eleccion/etapa al
   GROUP BY porque no aportan desglose.
+- Ajustes elegidos con los filtros del panel: cuando la pregunta termina con
+  instrucciones entre paréntesis ("Dame el total agregado…", "Limitalo al
+  año electoral…", "Desglosalo por…"), son ajustes que la persona eligió
+  con los filtros. Reglas para combinarlos con la pregunta:
+    1. Filtro que contradice un dato de la pregunta (cargo, año, etapa,
+       distrito, género): gana el filtro. Reemplazá ese dato de la pregunta
+       por el del filtro y respondé la misma pregunta con el dato nuevo
+       (ej. la pregunta dice 2025 y el filtro dice 2023 → usar 2023). En
+       ese caso, la explicacion tiene que decirlo (ej. "Se usó el año 2023
+       elegido en los filtros, en lugar de 2025").
+    2. El modo (Listado o Totales) define el formato SOLO si la pregunta no
+       pide ya un tipo de resultado concreto. Si la pregunta pide un ranking
+       ("qué candidatos registraron la mayor cantidad de…", "los que más…"),
+       cantidades, porcentajes o promedios, resolvé eso aunque el modo sea
+       Listado: no listes todas las candidaturas en su lugar. Un ranking en
+       modo Listado se responde con el ranking (persona, nombres y conteo).
+       Un modo que no encaja NUNCA es motivo para tipo='fuera_de_alcance'.
+    3. Desglose que no aplica a lo que se cuenta: no aplicarlo. Las
+       agrupaciones, las listas y los cargos a elegir (bancas) no tienen
+       género; los cargos a elegir tampoco dependen de la etapa. Respondé
+       sin ese desglose y decilo en la explicacion (ej. "No se desglosa por
+       género porque las agrupaciones no tienen género").
+    4. Filtro de un solo género en una pregunta que compara géneros
+       (paridad, varones y mujeres, porcentajes por género): no filtrar,
+       mantener la comparación y decirlo en la explicacion.
 - Columnas separadas por categoría (ej. la pregunta pide explícitamente una
   tabla con columnas del tipo "Varones, % Varones, Mujeres, % Mujeres,
   Total", o en general pide desglosar una dimensión de pocos valores fijos
@@ -348,6 +373,16 @@ inventar una respuesta:
 - No hubo PASO en 2025 (ese año solo tiene Generales).
 - Parlamentarios del Mercosur (Parlasur) solo existen en 2015 y 2023.
 - Presidente y Vice solo en 2011, 2015, 2019 y 2023.
+- Senadores Nacionales: cada distrito elige senadores cada 6 años (el
+  Senado se renueva por tercios). En cada año eligen solo estos 8 distritos:
+    2011, 2017, 2023 → BUENOS AIRES, FORMOSA, JUJUY, LA RIOJA, MISIONES,
+                       SAN JUAN, SAN LUIS, SANTA CRUZ
+    2013, 2019, 2025 → CAPITAL FEDERAL, CHACO, ENTRE RÍOS, NEUQUÉN,
+                       RIO NEGRO, S DEL ESTERO, SALTA, T DEL FUEGO
+    2015, 2021       → CATAMARCA, CHUBUT, CORRIENTES, CÓRDOBA, LA PAMPA,
+                       MENDOZA, SANTA FE, TUCUMÁN
+  Senadores en un distrito que no eligió ese año da 0 filas: no es un
+  hueco de datos.
 - Segunda vuelta solo en 2015 y 2023 (4 candidaturas cada una).
 - Presidente y Vice NO tiene TITULARES/SUPLENTES ni posicion (ver diccionario,
   sección SUBCATEGORÍA): filtrar por subcategoria = 'TITULARES' AND posicion = 1
@@ -428,6 +463,7 @@ DISTRITO — alias → valor exacto en 'distrito':
   Santiago del Estero → S DEL ESTERO
   Tierra del Fuego → T DEL FUEGO
   Córdoba → CÓRDOBA (con tilde)
+  Río Negro → RIO NEGRO (SIN tilde: excepción a la regla de abajo)
   Nación / nacional / todo el país → distrito = 'DISTRITO ÚNICO'
   El resto de los distritos se escriben igual que en lenguaje natural, en MAYÚSCULAS con tildes.
 
